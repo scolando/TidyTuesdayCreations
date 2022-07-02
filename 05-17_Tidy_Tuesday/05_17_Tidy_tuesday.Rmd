@@ -1,0 +1,57 @@
+---
+title: "Tidy_Tuesday 5-17-2022: Eurovision"
+output: html_document
+date: '2022-05-17'
+---
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(skimr)
+library(dplyr)
+```
+
+
+```{r message=FALSE}
+eurovision <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-05-17/eurovision.csv')
+
+eurovision_votes <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-05-17/eurovision-votes.csv')
+```
+
+## Data Exploration
+
+To start off, I tend to use glimpse and skim to better understand the structure of the data as well as the structure of each variable in the data frame.
+
+```{r results='hide'}
+glimpse(eurovision)
+skim(eurovision)
+```
+
+## Plotting the Number of Self-Votes
+
+For this Tidy Tuesday, I wanted to see the number of self-votes (i.e. when a country votes for itself) in Eurovision.
+
+```{r}
+eurovision_votes <- eurovision_votes %>%
+  mutate(self.voting = if_else(from_country == to_country, 1, 0))
+```
+
+```{r}
+votes_country <- eurovision_votes %>%
+  group_by(from_country) %>%
+  summarise(Total.self.votes = sum(self.voting))
+```
+
+Finally, I plotted it! I wanted to include all countries so apologies for small y-axis font. I do think it is interesting to see which countries voted for themselves the most versus those that did the least. A potential cool follow-up would be to facet by something like year or decade. Potentially, self-votes are associated with historical events in the country. For example, maybe Russia voted for itself the most during the Cold War. Maybe if I have time in the future, I will play around with this.
+
+```{r warning=FALSE}
+votes_country %>%
+  ggplot(aes(x = reorder(from_country, Total.self.votes), y = Total.self.votes, fill = reorder(from_country, Total.self.votes)))+
+  geom_bar(stat = "identity", show.legend = FALSE)+
+  theme_bw()+
+  theme(axis.text.y=element_text(size=6))+
+  scale_y_continuous(breaks=seq(0,60,by=10))+
+  coord_flip()+
+  xlab("Country")+
+  ylab("Number of Self-Votes")+
+  ggtitle("Number of Self-Votes in Eurovision, per Country (1956-2022)")
+```
