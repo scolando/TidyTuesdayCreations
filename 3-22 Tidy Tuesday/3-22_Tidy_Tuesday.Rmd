@@ -1,0 +1,174 @@
+---
+title: "Tidy Tuesday 03-22-2022: Baby Names"
+output: html_document
+date: '2022-03-22'
+---
+
+## The Data
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(broom)
+library(lubridate)
+library(skimr)
+library(ggrepel)
+```
+
+```{r message=FALSE}
+babynames <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-03-22/babynames.csv')
+nzbabynames <-readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-03-22/nz_names.csv')
+                              
+```
+
+## Data Exploration
+
+```{r results='hide'}
+babynames %>%
+  skim()
+
+nzbabynames %>%
+  skim()
+```
+
+## Sara versus Sarah
+
+```{r}
+Sara <- babynames %>%
+  filter(name == "Sara" & sex == "F") %>%
+  mutate(prop_factor = as.factor(prop))
+```
+
+```{r}
+Sarah <- babynames %>%
+  filter(name == "Sarah" & sex == "F") %>%
+  mutate(prop_factor = as.factor(prop))
+```
+
+```{r}
+colors <- c("Sara" = "red", "Sarah" = "blue")
+
+Sara %>%
+  ggplot(aes(x = year, y = prop)) +
+  geom_line(aes(color = "Sara")) +
+  geom_area(alpha = .7, aes(fill = "Sara")) +
+  geom_line(data = Sarah, aes(color = "Sarah")) +
+  geom_area(data = Sarah, alpha = .1, aes(fill = "Sarah"))+
+  theme_bw()+
+  labs(color = "Legend")+
+  guides(fill=FALSE)+
+  ylab("Proportion")+
+  xlab("Year")+
+  ggtitle("Popularity of Sarah versus Sara in the United States (1880-2017)")+
+  xlim(c(1880,2017))
+```
+
+
+## Sara in NZ versus US
+
+```{r}
+nz_prop<- nzbabynames %>%
+  group_by(Year, Sex) %>%
+  mutate(n = n()) %>% 
+  ungroup() %>%
+  mutate(prop = Count/n) %>%
+  rename(year = Year)
+```
+
+```{r}
+Sara_1 <- nz_prop %>%
+  filter(Name == "Sara" & Sex == "Female")
+```
+
+```{r trying to overlay them, warning=FALSE}
+colors <- c("New Zealand" = "blue", "United States" = "red")
+
+Sara %>%
+ggplot(aes(x = year, y = prop)) +
+  geom_area(alpha = .7, aes(fill = "United States"))+
+         geom_line(aes(color = "United States")) +
+  geom_line(data = Sara_1, aes(color = "New Zealand")) +
+  geom_area(data = Sara_1, aes(fill="New Zealand"), alpha = .1)+
+    labs(color = "Legend")+
+    guides(fill=FALSE)+
+  theme_bw()+
+   ylab("Proportion")+
+  xlab("Year")+
+  ggtitle("Popularity of Sara in the United States versus New Zealand (1880-2017)")+
+  xlim(c(1880,2017))
+```
+
+## Plotting Interesting 2000s Names
+
+```{r}
+Siri <- babynames %>%
+  filter(name == "Siri" & sex == "F") %>%
+  mutate(prop_factor = as.factor(prop))
+
+Alexa <- babynames %>%
+  filter(name == "Alexa" & sex == "F") %>%
+  mutate(prop_factor = as.factor(prop))
+
+Katrina <- babynames %>%
+  filter(name == "Katrina" & sex == "F") %>%
+  mutate(prop_factor = as.factor(prop))
+
+Elsa <- babynames %>%
+  filter(name == "Elsa" & sex == "F") %>%
+  mutate(prop_factor = as.factor(prop))
+
+Isis <- babynames %>%
+  filter(name == "Isis" & sex == "F") %>%
+  mutate(prop_factor = as.factor(prop))
+
+Bella <- babynames %>%
+  filter(name == "Bella" & sex == "F") %>%
+  mutate(prop_factor = as.factor(prop))
+```
+
+```{r warning=FALSE}
+colors <- c("Siri" = "deepskyblue2", "Alexa" = "red", "Katrina" = "aquamarine3", "Elsa" = "darkslategray", "Isis" = "darkorchid1", "Bella" = "blue")
+
+Siri %>%
+  ggplot(aes(x = year, y = prop)) +
+         geom_line(aes(color = "Siri"), size=0.7)+
+  geom_line(data = Alexa, aes(color = "Alexa"), size=0.7)+
+  geom_line(data = Katrina, aes(color = "Katrina"), size=0.7)+
+  geom_line(data = Elsa, aes(color = "Elsa"), size=0.7)+
+  geom_line(data = Isis, aes(color = "Isis"), size=0.7)+
+  geom_line(data = Bella, aes(color = "Bella"), size=0.7)+
+  geom_vline(xintercept = 2014+.75, color = "red", alpha = .5)+
+  geom_vline(xintercept = 2005, color = "aquamarine3", alpha = .5)+
+  geom_vline(xintercept = 2013+.75, color = "darkslategray", alpha = .4)+
+  geom_vline(xintercept = 2011 +.75, color = "deepskyblue2", alpha =.5)+
+  geom_vline(xintercept = 2013.9 +.75, color =  "darkorchid1", alpha = .5)+
+   geom_vline(xintercept = 2005.75, color =  "blue", alpha = .5)+
+  annotate(geom="text", x=2002.75, y=0.0015, label="Hurricane Katrina",
+              color="aquamarine3")+
+  annotate(geom="text", x=2010, y=0.001, label="Siri comes out",
+              color="deepskyblue2")+
+   annotate(geom="text", x=2011.5, y=0.003, label="Frozen Premieres",
+              color="darkslategray")+
+   annotate(geom="text", x=2012.5, y=0.0019, label="Alexa comes out",
+              color="red")+
+  annotate(geom="text", x=2011.8, y=0.0015, label="Isis Gains Prominence",
+              color="darkorchid1")+
+  annotate(geom="text", x=2003.5, y=0.001, label="Twilight Released",
+              color="blue")+
+  
+     labs(color = "Legend")+
+    guides(fill=FALSE)+
+  
+
+  scale_x_continuous(limits = c(2000, 2017))+
+   scale_y_continuous(limits = c(0,.0032))+
+  ylab("Proportion")+
+  xlab("Year")+
+  ggtitle("Popularity of Select Baby Names (2000-2017)")+
+
+
+                                 
+                                
+  
+  theme_bw()
+```

@@ -4,6 +4,10 @@ output: html_document
 date: '2022-05-17'
 ---
 
+## The Data
+
+This week's data comes from [Eurovision](https://eurovision.tv/) which is a song contest for European countries. The data describes the event location, year, section etc. as well as the competitors' ranks, points, and associated country.
+
 ```{r message=FALSE, warning=FALSE}
 library(tidyverse)
 library(skimr)
