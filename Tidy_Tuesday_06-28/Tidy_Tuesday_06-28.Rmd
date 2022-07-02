@@ -1,0 +1,250 @@
+---
+title: "Tidy Tuesday 06-28-2022: UK Gender Pay Gap"
+output: html_document
+date: '2022-06-28'
+---
+
+## The Data
+
+This week's Tidy Tuesday data comes from [gender-pay-gap.service.gov.uk](https://gender-pay-gap.service.gov.uk/viewing/download). The data describes income and bonus metrics for different UK employers, partitioned by males and females.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lubridate)
+library(gridExtra)
+library(gganimate)
+library(gifski)
+```
+
+```{r importing data, message=FALSE}
+paygap <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-06-28/paygap.csv')
+```
+
+I first added an additional variable of year to the paygap dataframe. I extracted year from paygap's *date_submitted* variable.
+
+```{r adding year variable}
+paygap <- paygap %>%
+  mutate(year = year(date_submitted))
+```
+
+## Data Exploration
+
+I started by looking at the male and female bonus percents. I wanted to visually compare the *male_bonus_percent* and *female_bonus_percent* via a histogram. To create this histogram, I first began by creating an object for male bonus percent and another object for female bonus percent
+
+```{r looking a sex diff between males and females}
+male_bonus <- paygap %>%
+  select(male_bonus_percent)
+
+male_lower <- paygap %>%
+  select(male_lower_quartile)
+```
+
+
+```{r message=FALSE}
+paygap %>%
+  ggplot(aes(x = female_bonus_percent))+
+  geom_histogram(color = "red", alpha = .5, fill = "red") +
+  geom_histogram(data = male_bonus, aes(x = male_bonus_percent), color = "blue", alpha = .5, fill = "blue")+
+  theme_bw()+
+  xlab("Percent Receiving Bonuses")+
+  ggtitle("UK Paygap: Percent Receiving Bonuses: Males v. Females")
+```
+
+Interestingly, there were not much difference in the percent receiving bonuses for males versus females. It would be interesting in the future to see if there is a difference in the *amount* in bonuses for males versus females.
+
+I also created histograms of the percent of males versus females in each salary quartile. Female data is in red and the male data is in blue. The vertical lines are associated with the mean of histogram. Again, the female mean is in red and the male mean is in blue.  It appears that as the salary quartile increases, the mean percent in the salary quartiles or brackets for males versus females diverges.
+
+```{r getting the means, eval=FALSE}
+skimr::skim_without_charts(paygap)
+```
+
+```{r static histograms, warning=FALSE, message=FALSE}
+a <- paygap %>%
+  ggplot(aes(x = female_lower_quartile))+
+  geom_histogram(color = "red", fill = "red", alpha = .5) +
+  geom_vline(xintercept = 	54.241541, color = "red", size = 1.25)+
+  geom_histogram(data = paygap, aes(x = male_lower_quartile), color = "blue", fill = "blue", alpha = .5)+
+  geom_vline(xintercept = 	45.758459, color = "blue", size = 1.25)+
+   theme_bw()+
+  xlab("Percentage of Each Sex in Lower Quartile Pay")
+
+b <- paygap %>%
+  ggplot(aes(x = female_lower_middle_quartile))+
+  geom_histogram(color = "red", fill = "red", alpha = .5) +
+   geom_vline(xintercept = 	49.884965, color = "red", size = 1.75)+
+  geom_histogram(data = paygap, aes(x = male_lower_middle_quartile), color = "blue", fill = "blue", alpha = .5)+
+   geom_vline(xintercept = 	50.115035, color = "blue", size = 1.25)+
+   theme_bw()+
+  xlab("Percentage of Each Sex in Lower Middle Quartile Pay")
+
+c <- paygap %>%
+  ggplot(aes(x = female_upper_middle_quartile))+
+  geom_histogram(color = "red", fill = "red", alpha = .5) +
+  geom_vline(xintercept = 45.515729, color = "red", size = 1.25)+
+  geom_histogram(data = paygap, aes(x = male_upper_middle_quartile), color = "blue", fill = "blue", alpha = .5)+
+   geom_vline(xintercept = 54.484271, color = "blue", size = 1.25)+
+   theme_bw()+
+  xlab("Percentage of Each Sex in Upper Middle Quartile Pay")
+
+d <- paygap %>%
+  ggplot(aes(x = female_top_quartile))+
+  geom_histogram(color = "red", fill = "red", alpha = .5) +
+  geom_vline(xintercept = 39.85687, color = "red", size = 1.25)+
+  geom_histogram(data = paygap, aes(x = male_top_quartile), color = "blue", fill = "blue", alpha = .5)+
+  geom_vline(xintercept = 60.14313, color = "blue", size = 1.25)+
+  theme_bw()+
+  xlab("Percentage of Each Sex in Top Quartile Pay")
+  
+
+grid.arrange(a,b,c,d, nrow = 2)
+```
+
+## Creating a Gif
+
+I next wanted to play around with animated stacked histograms to see how the histograms and mean lines change over the years (2017-2022) and combine all the gifs for the salary quartiles into a singular gif. The code is pretty much symmetric between salary quartiles. The gif pauses at the counts for each year starting at 2017 going to 2022.
+
+```{r, warning=FALSE, message = FALSE}
+lower_means <- paygap %>%
+  drop_na(female_lower_quartile, male_lower_quartile) %>%
+  select(employer_name, female_lower_quartile, male_lower_quartile, year) %>%
+    pivot_longer(cols = contains("lower"), names_to = "gender", values_to = "percentage") %>%
+  group_by(year, gender) %>%
+  summarise(mean = mean(percentage))
+
+Low_quartile <- paygap %>%
+  drop_na(female_lower_quartile, male_lower_quartile) %>%
+  select(employer_name, female_lower_quartile, male_lower_quartile, year) %>%
+    pivot_longer(cols = contains("lower"), names_to = "gender", values_to = "percentage")
+
+p <- Low_quartile %>%
+  ggplot(aes(x = percentage, fill = gender, color = gender, frame = year))+
+  geom_histogram(alpha = .75)+
+  theme_bw()+ geom_vline(data = lower_means, aes(xintercept = mean, color = gender, year), size = 2)+
+  xlim(c(0,100))+
+    transition_states(year, transition_length = 5, state_length = 5)+
+  ggtitle("Percent of Each Sex in Lower Salary Bracket")
+
+p_gif <- animate(p, fps = 10, 
+                 duration = 25,
+        width = 800, height = 200, 
+        renderer = gifski_renderer("animation1.gif"))
+```
+
+```{r warning=FALSE, message=FALSE}
+Low_middle_quartile <- paygap %>%
+  drop_na(female_lower_middle_quartile, male_lower_middle_quartile) %>%
+  select(employer_name, female_lower_middle_quartile, male_lower_middle_quartile, year) %>%
+    pivot_longer(cols = contains("middle"), names_to = "gender", values_to = "percentage")
+
+lower_middle_means <- paygap %>%
+  drop_na(female_lower_middle_quartile, male_lower_middle_quartile) %>%
+  select(employer_name, female_lower_middle_quartile, male_lower_middle_quartile, year) %>%
+    pivot_longer(cols = contains("middle"), names_to = "gender", values_to = "percentage") %>%
+  group_by(year, gender) %>%
+  summarise(mean = mean(percentage))
+
+q <- Low_middle_quartile %>%
+  ggplot(aes(x = percentage, fill = gender, color = gender, frame = year))+
+  geom_histogram(alpha = .75)+
+  theme_bw()+ geom_vline(data = lower_middle_means, aes(xintercept = mean, color = gender, year), size = 2)+
+  xlim(c(0,100))+
+    transition_states(year, transition_length = 5, state_length = 5)+
+  ggtitle("Percent of Each Sex in Lower Middle Bracket")
+
+q_gif <- animate(q, fps = 10, 
+                 duration = 25,
+        width = 800, height = 200, 
+        renderer = gifski_renderer("animation2.gif"))
+```
+
+```{r warning=FALSE, message=FALSE}
+Up_middle_quartile <- paygap %>%
+  drop_na(female_upper_middle_quartile, male_upper_middle_quartile) %>%
+  select(employer_name, female_upper_middle_quartile, male_upper_middle_quartile, year) %>%
+    pivot_longer(cols = contains("middle"), names_to = "gender", values_to = "percentage")
+
+upper_middle_means <- paygap %>%
+  drop_na(female_upper_middle_quartile, male_upper_middle_quartile) %>%
+  select(employer_name, female_upper_middle_quartile, male_upper_middle_quartile, year) %>%
+    pivot_longer(cols = contains("middle"), names_to = "gender", values_to = "percentage") %>%
+  group_by(year, gender) %>%
+  summarise(mean = mean(percentage))
+
+r <- Up_middle_quartile %>%
+  ggplot(aes(x = percentage, fill = gender, color = gender, frame = year))+
+  geom_histogram(alpha = .75)+
+  theme_bw()+ geom_vline(data = upper_middle_means, aes(xintercept = mean, color = gender, year), size = 2)+
+  xlim(c(0,100))+
+    transition_states(year, transition_length = 5, state_length = 5)+
+  ggtitle("Percent of Each Sex in Upper Middle Salary Bracket")
+
+r_gif <- animate(r, fps = 10, 
+                 duration = 25,
+        width = 800, height = 200, 
+        renderer = gifski_renderer("animation3.gif"))
+```
+
+```{r warning=FALSE, message=FALSE}
+Top_quartile <- paygap %>%
+  drop_na(female_top_quartile, male_top_quartile) %>%
+  select(employer_name, female_top_quartile, male_top_quartile, year) %>%
+    pivot_longer(cols = contains("top"), names_to = "gender", values_to = "percentage")
+
+top_means <- paygap %>%
+  drop_na(female_top_quartile, male_top_quartile) %>%
+  select(employer_name, female_top_quartile, male_top_quartile, year) %>%
+    pivot_longer(cols = contains("top"), names_to = "gender", values_to = "percentage") %>%
+  group_by(year, gender) %>%
+  summarise(mean = mean(percentage))
+
+s <- Top_quartile %>%
+  ggplot(aes(x = percentage, fill = gender, color = gender, frame = year))+
+  geom_histogram(alpha = .75)+
+  theme_bw()+ geom_vline(data = top_means, aes(xintercept = mean, color = gender, year), size = 2)+
+  xlim(c(0,100))+
+    transition_states(year, transition_length = 5, state_length = 5)+
+  ggtitle("Percent of Each Sex in Top Salary Bracket")
+
+
+s_gif <- animate(s, fps = 10, 
+                 duration = 25,
+        width = 800, height = 200, 
+        renderer = gifski_renderer("animation4.gif"))
+```
+
+After creating the individual gifs, I could *finally* combine thee gifs into a singular stacked gif. Huge shout out to [Connor Rothfield's article](https://github.com/rfordatascience/tidytuesday/tree/master/data/2022/2022-06-28) for helping me figure out how to do this using the package *Magick*.
+
+
+```{r message=FALSE, warning=FALSE}
+library(magick)
+
+p_mgif <- image_read(p_gif)
+q_mgif <- image_read(q_gif)
+r_mgif <- image_read(r_gif)
+s_mgif <- image_read(s_gif)
+
+new_gif <- image_append(c(p_mgif[1], q_mgif[1], r_mgif[1], s_mgif[1]), stack = TRUE)
+for(i in 2:125){
+  combined <- image_append(c(p_mgif[i], q_mgif[i], r_mgif[i], s_mgif[i]), stack = TRUE)
+  new_gif <- c(new_gif, combined)
+}
+
+new_gif
+```
+
+**Finally, I saved to gif to my computer (woohoo!)**
+
+```{r message = FALSE}
+anim_save("new_gif.gif", new_gif)
+```
+
+*A little praise for trying out something new*
+
+```{r}
+library(praise)
+praise()
+```
+
+
+

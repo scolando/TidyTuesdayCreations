@@ -1,4 +1,5 @@
-# TidyTuesdayCreations
-Personal Journal of Tidy Tuesday Creations 
+# Tidy Tuesday Creations
 
-In this repo is my collection of data visuals endeavors from Tidy Tuesday. Creating these visualizations allows me to hone in my skills in R, particularly around making meaningful figures from a novel data. 
+My personal journal of Tidy Tuesday creations. See the folders in this repository for the source code etc. In this README.md are the links to my rpubs for my Tidy Tuesday creations to see my data visualizations in action! 
+
+* 06/28/2022 [UK Gender Pay Gap](https://rpubs.com/scolando/Tidy-Tuesday-06-28-2022)
