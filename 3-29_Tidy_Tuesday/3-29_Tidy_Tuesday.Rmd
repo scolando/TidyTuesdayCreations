@@ -1,0 +1,174 @@
+---
+title: "3-29_Tidy_Tuesday"
+output: html_document
+date: "2022-03-29"
+---
+
+## The Data
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(knitr)
+library(skimr)
+library(broom)
+library(GGally)
+library(ggrepel)
+```
+
+```{r importing data, message=FALSE}
+sports <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-03-29/sports.csv')
+```
+
+## Data Exploration
+
+```{r results='hide'}
+sports %>%
+  glimpse()
+```
+## Track Plots!
+
+```{r}
+TF_sports <- sports %>%
+  filter(grepl('Track', sports))
+```
+
+```{r}
+TF_new <- TF_sports %>%
+  mutate(pmale = sum_partic_men/ef_male_count) %>%
+  mutate(pfemale = sum_partic_women/ef_female_count)
+```
+
+```{r}
+TF_new_long <- TF_new %>%
+  pivot_longer(cols = pmale:pfemale, names_to = "gender", values_to = "prop")
+```
+
+```{r}
+TF_long <- TF_new %>%
+  pivot_longer(cols = rev_women:rev_men, names_to = "gender", values_to = "revenue")
+```
+
+
+
+```{r}
+Gender_pac12 <- TF_new_long %>%
+   mutate(gender_prop = ifelse(gender == "pmale", -prop, prop)) %>%
+  filter(institution_name %in% c("University of Arizona", "Arizona State University", "University of California, Berkeley", "University of California-Los Angeles", "University of California-Berkeley", "University of Colorado-Boulder", "University of Oregon", "Oregon State University", "University of Southern California","Stanford University", "University of Utah", "University of Washington", "Washington State University"))
+```
+
+
+```{r}
+ggplot(Gender_pac12, aes(y = gender_prop , x = institution_name)) +   
+  geom_bar(aes(fill = gender), stat="identity") + 
+  geom_hline(yintercept=0) +
+  facet_wrap(~year)+
+  xlab("Proportion")+
+  ylab("Institution")+
+  ggtitle("Pac12: Proportion of Male and Female Track Athletes")+
+  coord_flip()+
+  theme_bw()
+```
+
+```{r}
+Gender_sciac <- TF_new_long %>%
+   mutate(gender_prop = ifelse(gender == "pmale", -prop, prop)) %>%
+  filter(institution_name %in% c("California Institute of Technology", "Occidental College", "Pomona College", " University of Redlands", "Whittier College", "Chapman University", "California Lutheran University", "Claremont McKenna College"))
+```
+
+```{r}
+ggplot(Gender_sciac, aes(y = gender_prop , x = institution_name)) +   
+  geom_bar(aes(fill = gender), stat="identity") + 
+  geom_hline(yintercept=0) +
+  facet_wrap(~year)+
+  coord_flip()+
+  theme_bw()+
+   xlab("Proportion")+
+  ylab("Institution")+
+  ggtitle("Sciac: Proportion of Male and Female Track Athletes")
+```
+
+```{r}
+TF_long_exp <-  TF_new %>%
+  pivot_longer(cols = exp_women:exp_men, names_to = "gender", values_to = "exp")
+```
+
+```{r warning=FALSE}
+TF_long_exp %>%  mutate(gender_prop = ifelse(gender == "exp_men", -exp, exp)) %>%
+  filter(institution_name %in% c("California Institute of Technology", "Occidental College", "Pomona College", " University of Redlands", "Whittier College", "Chapman University", "California Lutheran University", "Claremont McKenna College")) %>%
+  ggplot(aes(y = gender_prop , x = institution_name)) +   
+  geom_bar(aes(fill = gender), stat="identity") + 
+  geom_hline(yintercept=0) +
+  facet_wrap(~year)+
+  coord_flip()+
+  theme_bw()
+```
+
+
+```{r warning=FALSE}
+TF_long_exp %>%  mutate(gender_prop = ifelse(gender == "exp_men", -exp, exp)) %>%
+  filter(institution_name %in% c("University of Arizona", "Arizona State University", "University of California, Berkeley", "University of California-Los Angeles", "University of California-Berkeley", "University of Colorado-Boulder", "University of Oregon", "Oregon State University", "University of Southern California","Stanford University", "University of Utah", "University of Washington", "Washington State University")) %>%
+  ggplot(aes(y = gender_prop , x = institution_name)) +   
+  geom_bar(aes(fill = gender), stat="identity") + 
+  geom_hline(yintercept=0) +
+  ylab("Expenditure")+
+  xlab("Institution")+
+  facet_wrap(~year)+
+  coord_flip()+
+  theme_bw()
+```
+## Comparison across Sports
+
+```{r}
+TF_long_exp_all <-  sports %>%
+  pivot_longer(cols = exp_women:exp_men, names_to = "gender", values_to = "exp")
+```
+
+```{r warning=FALSE}
+TF_long_exp_all %>%  mutate(gender_prop = ifelse(gender == "exp_men", -exp, exp)) %>%
+  filter(institution_name %in% c("University of Arizona", "Arizona State University", "University of California, Berkeley", "University of California-Los Angeles", "University of California-Berkeley", "University of Colorado-Boulder", "University of Oregon", "Oregon State University", "University of Southern California","Stanford University", "University of Utah", "University of Washington", "Washington State University")) %>%
+   filter(sports %in% c("Football", "Basketball", "Soccer", "Baseball", "Softball", "Tennis", "All Track Combined", "Volleyball", "Swimming and Diving")) %>%
+  ggplot(aes(y = gender_prop , x = institution_name)) +   
+  geom_bar(aes(fill = gender), stat="identity") + 
+  geom_hline(yintercept=0) +
+  facet_wrap(~sports, scales = "fixed")+
+  coord_flip()+
+  theme_bw()
+```
+
+```{r}
+TF_long_exp_all %>%  mutate(gender_prop = ifelse(gender == "exp_men", -exp, exp)) %>%
+  filter(institution_name %in% c("California Institute of Technology", "Occidental College", "Pomona College", " University of Redlands", "Whittier College", "Chapman University", "California Lutheran University", "Claremont McKenna College")) %>%
+   filter(sports %in% c("Football", "Basketball", "Soccer", "Baseball", "Softball", "Tennis", "Track and Field, Outdoor", "Volleyball", "Swimming and Diving")) %>%
+  ggplot(aes(y = gender_prop , x = institution_name)) +   
+  geom_bar(aes(fill = gender), stat="identity") + 
+  geom_hline(yintercept=0) +
+  facet_wrap(~sports, scales = "fixed")+
+  coord_flip()+
+  theme_bw()
+```
+```{r warning=FALSE}
+sports %>%
+  filter(grepl('NCAA', classification_name)) %>%
+  ggplot(aes(x = total_exp_menwomen, y = exp_women)) +
+  geom_point(size = 0.05, alpha = 0.3)+
+  geom_abline(slope = .5, color = "blue", alpha = .5)+
+  geom_abline(slope = 1, color = "blue", alpha = .3)+
+xlim(c(0,4263732))+
+  theme_bw()
+```
+
+
+```{r}
+sports %>%
+  filter(grepl('NCAA Division I-FBS', classification_name)) %>%
+  filter(sports == "Football") %>%
+  filter(ef_total_count > 30000) %>%
+  ggplot(aes(x = year, y=exp_men, group=institution_name, color = institution_name)) +
+  geom_smooth(method = "lm", se = FALSE) +
+    geom_point()+
+  theme_bw()+
+  ggtitle("Big School's Football Funding Over Time")+
+  ylab("Expenditure")+
+  xlab("Year")
+```
