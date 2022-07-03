@@ -1,0 +1,65 @@
+---
+title: "Tidy Tuesday 06-07-2022: Pride Corporate Accountability Project"
+output: html_document
+date: "2022-06-07"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(treemapify)
+```
+
+```{r message=FALSE, echo = FALSE}
+pride_aggregates <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-06-07/pride_aggregates.csv')
+fortune_aggregates <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-06-07/fortune_aggregates.csv')
+static_list <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-06-07/static_list.csv')
+pride_sponsors <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-06-07/pride_sponsors.csv')
+corp_by_politicians <-readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-06-07/corp_by_politician.csv')
+donors <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-06-07/donors.csv')
+```
+
+
+I think it would be cool to try to make a tree map using the problematic companies that are pride sponsors + fund anti-LGBTQ+ organizations and the size of each tile is relative to its funding of anti-LGBTQ+ org.
+
+```{r}
+top_20_new <- fortune_aggregates %>%
+  rename(Total.Contributed = `Total Contributed`)%>%
+  filter(Company != "Grand Total") %>%
+  arrange(desc(Total.Contributed)) %>%
+  slice(1:20) %>%
+  mutate(Total.Contributed = round(Total.Contributed, digits = 0)) %>%
+  mutate(options(scipen = 999)) %>%
+  mutate(Company = case_when(Company == "Enterprise Products Partners" ~ "Enterprise Products",
+                             Company == "American Electric Power" ~ "American \nElectric",
+                             Company == "UnitedHealth Group" ~ "UnitedHealth",
+                             Company == "Molina Healthcare" ~ "Molina \nHealthcare",
+                             Company == "Berkshire Hathaway" ~ "Berkshire \nHathaway",
+                             TRUE ~ Company))
+                             
+```
+
+```{r}
+ggplot(top_20_new, aes(area = Total.Contributed, fill = Total.Contributed, label = paste(Company, paste("$",Total.Contributed, sep = ""), sep = "\n"), color = Total.Contributed)) +
+  geom_treemap()+
+  geom_treemap_text(color = "gray97", min.size = 0, fontface = "bold", place = "center")+
+  theme_void()+
+  theme(legend.position="none") +
+  theme(plot.title = element_text(size = 12, face = "bold"))+
+  scale_fill_gradient(low = "gray75", high = "gray15", space = "Lab")+
+  ggtitle("'Pride Sponsor' Fortune 500 Companies Donating the MOST to Anti-LGBTQ+ Politicians")
+```
+
+### A Subset of Non-Two-Faced Companies -- supporting NYC Pride!
+
+```{r}
+yay_nottwofaced_companies <- subset(pride_sponsors, !(Company %in% pride_aggregates$Company)) %>%
+  select(Company, 'Pride Event Sponsored') %>%
+  rename(Pride_Event = 'Pride Event Sponsored') %>%
+  filter(Pride_Event == "NYC Pride") %>%
+  select(Company)
+  
+
+yay_nottwofaced_companies
+```
+
