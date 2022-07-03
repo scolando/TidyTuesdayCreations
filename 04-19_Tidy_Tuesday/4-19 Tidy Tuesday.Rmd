@@ -1,0 +1,176 @@
+---
+title: "Tidy Tuesday 04-19-2022: Crosswords"
+output: html_document
+date: "2022-04-19"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(broom)
+library(lubridate)
+library(ggstream)
+library(circlize)
+library(circular)
+library(ggrepel)
+library(knitr)
+library(ggimage)
+library(ggtext)
+library(png)
+library(shiny)
+library(stringr)
+```
+
+```{r data}
+big_dave <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-04-19/big_dave.csv')
+times <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-04-19/times.csv')
+```
+
+```{r}
+glimpse(times)
+skimr::skim_without_charts(times)
+```
+
+
+
+
+
+```{r}
+arranged <- times %>%
+  arrange(desc(answer))
+
+times_answer_count_year <- times %>%
+  mutate(puzzle_year = year(puzzle_date)) %>%
+  count(answer, puzzle_year)
+```
+
+
+```{r}
+times_answer_count <- times %>%
+  count(answer) %>%
+   filter(answer != "A") %>%
+  arrange(desc(n))
+
+top_20 <- times_answer_count %>%
+  slice(1:20)
+
+times_answer_count_year <- times %>%
+  mutate(puzzle_year = year(puzzle_date)) %>%
+  count(answer, puzzle_year) %>%
+   filter(answer != "A") %>%
+  group_by(answer) %>%
+  group_by(puzzle_year) %>%
+  arrange(desc(n))
+
+top_20 <- times_answer_count %>%
+  slice(1:20)
+
+
+```
+
+```{r}
+top_20 %>%
+  ggplot(aes(x= reorder(answer, -n), y=n, fill = answer)) +
+  geom_bar(stat="identity") + 
+  coord_polar() +
+  labs(title = "Top 20 Most Common Answers to Times Crosswords",
+        x = "Answers", y = "Total Times Answer has Appeared") +
+  geom_text(aes(label = n), size = 4)+
+  theme_bw()
+```
+
+```{r}
+df <- big_dave %>%
+  na.omit()
+
+locs <- str_locate(fixed(df$clue), fixed(df$definition))
+df <- df[!is.na(locs[, 1]), ]
+locs <- locs[!is.na(locs[, 1]), ]
+```
+
+```{r}
+clue_len <- df$clue %>% 
+  fixed() %>% 
+  str_locate_all(fixed(" (")) %>% 
+  sapply(function(mt) max(mt[nrow(mt), 1] - 1, 0)) %>% 
+  unlist
+```
+
+```{r}
+df <- cbind(df, def_start = locs[, 1], def_end = locs[, 2], clue_len = clue_len)
+sum(clue_len == 0) # 3139: just discard these
+df <- filter(df, clue_len > 0)
+```
+
+```{r}
+# looking at where first character appears according to proportionality
+df <- df %>% 
+  mutate(start_prop = def_start/clue_len) %>%
+  mutate(interval = cut(start_prop, breaks = 10))
+```
+
+```{r}
+df %>%
+  ggplot(aes(x = interval))+
+  geom_histogram(stat ="count")+
+  theme_minimal()
+```
+
+```{r}
+name_df <- df %>%
+  group_by(puzzle_name) %>%
+  summarise(ave_length = mean(clue_len), ave_start = mean(def_start), ave_end = mean(def_end)) %>%
+  mutate(prop = ave_start/ave_length) 
+
+name_df_end <- df %>%
+  group_by(puzzle_name) %>%
+  summarise(ave_length = mean(clue_len), ave_start = mean(def_start), ave_end = mean(def_end)) %>%
+  mutate(prop = ave_end/ave_length)
+
+name_df %>%
+  ggplot(aes(x = prop))+
+  geom_histogram(fill = "red", alpha = .67)+
+  geom_histogram(data = name_df_end, fill = "blue", alpha = .67)+
+  theme_minimal()
+```
+
+```{r}
+name_pick_df <- df %>%
+  filter(grepl("2022-03-", puzzle_date)) %>%
+  mutate(prop = def_start/clue_len)
+
+name_pick_df %>%
+  ggplot(aes(x = prop))+
+  geom_histogram()+
+  facet_wrap(~puzzle_name)
+```
+
+```{r}
+df %>%
+  ggplot(aes(x = def_start))+
+  geom_histogram()
+```
+
+```{r}
+bd_question <- df %>%
+  mutate(question = case_when(
+    str_detect(clue, "\\?") ~ "yes",
+               TRUE ~ "no")) %>%
+  filter(question == "yes") %>%
+   mutate(def_length = def_end - def_start)
+
+bd_noquestion <- df %>%
+  mutate(question = case_when(
+    str_detect(clue, "\\?") ~ "yes",
+               TRUE ~ "no")) %>%
+  filter(question == "no") %>%
+   mutate(def_length = def_end - def_start)
+
+bd_question %>%
+  ggplot(aes(x = def_length))+
+  geom_histogram(fill = "red")+
+  geom_histogram(data = bd_noquestion, fill = "blue", alpha = .2)+
+  theme_minimal()
+```
+
+

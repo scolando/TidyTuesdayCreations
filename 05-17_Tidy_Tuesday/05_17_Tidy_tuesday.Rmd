@@ -1,5 +1,5 @@
 ---
-title: "Tidy_Tuesday 5-17-2022: Eurovision"
+title: "Tidy Tuesday 5-17-2022: Eurovision"
 output: html_document
 date: '2022-05-17'
 ---
