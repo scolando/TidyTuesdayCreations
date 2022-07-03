@@ -6,6 +6,8 @@ date: '2022-03-22'
 
 ## The Data
 
+This week's data comes from [US babynames](http://hadley.github.io/babynames/) and [NZ babynames](https://github.com/ekothe/nzbabynames). The data describes the name, year, popularity in that year, count, proportion, as well as the sex associated with the name. The data begins in 1880 and goes until 2017.
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
@@ -23,6 +25,8 @@ nzbabynames <-readr::read_csv('https://raw.githubusercontent.com/rfordatascience
 
 ## Data Exploration
 
+Like usual, I started with skimming the data frames to see if there was any interesting information. I didn't end up using much of the info from this skim chart but it was still informative to see the variable distributions etc. 
+
 ```{r results='hide'}
 babynames %>%
   skim()
@@ -32,6 +36,8 @@ nzbabynames %>%
 ```
 
 ## Sara versus Sarah
+
+My name is Sara, but most people I meet spell their name Sarah rather than Sara. Just out of curiosity, I wanted to see how different the popularity of Sarah and Sara really are. As the plot below shows, the name Sarah is more popular than the name Sara -- though it is interesting that they have an uptick at about the same time (roughly between 1980-1990s).
 
 ```{r}
 Sara <- babynames %>%
@@ -65,6 +71,8 @@ Sara %>%
 
 
 ## Sara in NZ versus US
+
+As aforementioned, my name is Sara, and because of this, I looked at the popularity of my name in NZ versus US. Interestingly, the name Sara is way more popular in NZ than the US.
 
 ```{r}
 nz_prop<- nzbabynames %>%
@@ -100,6 +108,8 @@ ggplot(aes(x = year, y = prop)) +
 
 ## Plotting Interesting 2000s Names
 
+I next wanted to try graphing interesting female baby names from the 2000s like Bella (from Twilight) and Alexa (the Amazon device) to see if them gaining pop culture significance was associated with a change in popularity. Obviously, this list of names is not exhaustive, meaning there are many other interesting babynames that can and should be tried out! The code for this plot is very very messy and I think that if I were to do this again, I would want to create a new data frame with just these names so that I would not have to call a new data set in every line of code. Particularly, the colors were a huge hassle because I was calling a new data frame each time. I opted to make the final plot look good, but because of that -- I sacrificed code elegance etc. 
+
 ```{r}
 Siri <- babynames %>%
   filter(name == "Siri" & sex == "F") %>%
@@ -129,6 +139,7 @@ Bella <- babynames %>%
 ```{r warning=FALSE}
 colors <- c("Siri" = "deepskyblue2", "Alexa" = "red", "Katrina" = "aquamarine3", "Elsa" = "darkslategray", "Isis" = "darkorchid1", "Bella" = "blue")
 
+
 Siri %>%
   ggplot(aes(x = year, y = prop)) +
          geom_line(aes(color = "Siri"), size=0.7)+
@@ -137,27 +148,30 @@ Siri %>%
   geom_line(data = Elsa, aes(color = "Elsa"), size=0.7)+
   geom_line(data = Isis, aes(color = "Isis"), size=0.7)+
   geom_line(data = Bella, aes(color = "Bella"), size=0.7)+
-  geom_vline(xintercept = 2014+.75, color = "red", alpha = .5)+
-  geom_vline(xintercept = 2005, color = "aquamarine3", alpha = .5)+
-  geom_vline(xintercept = 2013+.75, color = "darkslategray", alpha = .4)+
-  geom_vline(xintercept = 2011 +.75, color = "deepskyblue2", alpha =.5)+
-  geom_vline(xintercept = 2013.9 +.75, color =  "darkorchid1", alpha = .5)+
-   geom_vline(xintercept = 2005.75, color =  "blue", alpha = .5)+
+  
+  
+  geom_vline(xintercept = 2014+.75, color = "red1", alpha = .5)+
+  geom_vline(xintercept = 2005, color = "royalblue2", alpha = .5)+
+  geom_vline(xintercept = 2013+.75, color = "seagreen3", alpha = .6)+
+  geom_vline(xintercept = 2011 +.75, color = "deepskyblue1", alpha =.5)+
+  geom_vline(xintercept = 2013.9 +.75, color =  "turquoise3", alpha = .5)+
+   geom_vline(xintercept = 2005.75, color =  "lightgoldenrod4", alpha = .5)+
+  
+  
   annotate(geom="text", x=2002.75, y=0.0015, label="Hurricane Katrina",
-              color="aquamarine3")+
+              color="royalblue2")+
   annotate(geom="text", x=2010, y=0.001, label="Siri comes out",
               color="deepskyblue2")+
    annotate(geom="text", x=2011.5, y=0.003, label="Frozen Premieres",
-              color="darkslategray")+
+              color="seagreen3")+
    annotate(geom="text", x=2012.5, y=0.0019, label="Alexa comes out",
               color="red")+
   annotate(geom="text", x=2011.8, y=0.0015, label="Isis Gains Prominence",
-              color="darkorchid1")+
+              color="turquoise3")+
   annotate(geom="text", x=2003.5, y=0.001, label="Twilight Released",
-              color="blue")+
+              color="lightgoldenrod4")+
   
      labs(color = "Legend")+
-    guides(fill=FALSE)+
   
 
   scale_x_continuous(limits = c(2000, 2017))+
