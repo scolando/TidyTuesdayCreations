@@ -1,0 +1,110 @@
+---
+title: "Tidy Tuesday 05-31-2022: Company Reputation Poll"
+output: html_document
+date: "2022-05-31"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(ggrepel)
+library(gridExtra)
+library(plotly)
+```
+
+```{r}
+poll <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-05-31/poll.csv')
+reputation <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-05-31/reputation.csv')
+```
+
+
+
+```{r}
+top_2022 <- poll %>%
+   rename(rank_2022 = `2022_rank`) %>%
+  filter(rank_2022 < 21)
+```
+
+
+
+
+
+
+```{r}
+industry_2021 <- poll %>%
+  rename(rank_2022 = `2022_rank`) %>%
+  drop_na(rank) %>%
+  filter(year == 2021) %>%
+  group_by(industry) %>%
+  count()
+```
+
+```{r}
+industry_2021 <- industry_2021 %>%
+  mutate(proportion = n/100)
+```
+
+```{r}
+industry_2020 <- poll %>%
+  rename(rank_2022 = `2022_rank`) %>%
+  drop_na(rank) %>%
+  filter(year == 2020) %>%
+  group_by(industry) %>%
+  count() %>%
+  mutate(proportion = n/100)
+```
+
+```{r}
+industry_2019 <- poll %>%
+  rename(rank_2022 = `2022_rank`) %>%
+  drop_na(rank) %>%
+  filter(year == 2019) %>%
+  group_by(industry) %>%
+  count() %>%
+  mutate(proportion = n/100)
+```
+
+```{r}
+industry_2018 <- poll %>%
+  rename(rank_2022 = `2022_rank`) %>%
+  drop_na(rank) %>%
+  filter(year == 2018) %>%
+  group_by(industry) %>%
+  count() %>%
+  mutate(proportion = n/100)
+```
+
+```{r}
+industry_2017 <- poll %>%
+  rename(rank_2022 = `2022_rank`) %>%
+  drop_na(rank) %>%
+  filter(year == 2017) %>%
+  group_by(industry) %>%
+  count() %>%
+  mutate(proportion = n/100)
+
+  y.breaks.2017 <- cumsum(industry_2017$proportion) - industry_2017$proportion/2
+```
+
+```{r}
+fig <- plot_ly() 
+
+fig <- fig %>% add_pie(data = industry_2017, labels = ~industry, values = ~proportion,
+                         name = "2017", domain = list(row = 0, column = 0))
+fig <- fig %>% add_pie(data = industry_2018, labels = ~industry, values = ~proportion,
+                         name = "2018", domain = list(row = 0, column = 1))
+fig <- fig %>% add_pie(data = industry_2019, labels = ~industry, values = ~proportion,
+                         name = "2019", domain = list(row = 1, column = 0))
+fig <- fig %>% add_pie(data = industry_2020, labels = ~industry, values = ~proportion,
+                         name = "2020", domain = list(row = 1, column = 1))
+fig <- fig %>% add_pie(data = industry_2021, labels = ~industry, values = ~proportion,
+                         name = "2021", domain = list(row = 2, column = 2))
+
+fig <- fig %>% layout(title = "Proportion of Top 100 Rankings per Industry by Year", showlegend = F,
+                      grid=list(rows=3, columns=2),
+                      xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+                      yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+fig
+```
+
