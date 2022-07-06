@@ -153,7 +153,7 @@ Siri %>%
   geom_vline(xintercept = 2014+.75, color = "red1", alpha = .5)+
   geom_vline(xintercept = 2005, color = "royalblue2", alpha = .5)+
   geom_vline(xintercept = 2013+.75, color = "seagreen3", alpha = .6)+
-  geom_vline(xintercept = 2011 +.75, color = "deepskyblue1", alpha =.5)+
+  geom_vline(xintercept = 2011 +.75, color = "deeppink1", alpha =.5)+
   geom_vline(xintercept = 2013.9 +.75, color =  "turquoise3", alpha = .5)+
    geom_vline(xintercept = 2005.75, color =  "lightgoldenrod4", alpha = .5)+
   
@@ -161,7 +161,7 @@ Siri %>%
   annotate(geom="text", x=2002.75, y=0.0015, label="Hurricane Katrina",
               color="royalblue2")+
   annotate(geom="text", x=2010, y=0.001, label="Siri comes out",
-              color="deepskyblue2")+
+              color="deeppink1")+
    annotate(geom="text", x=2011.5, y=0.003, label="Frozen Premieres",
               color="seagreen3")+
    annotate(geom="text", x=2012.5, y=0.0019, label="Alexa comes out",
