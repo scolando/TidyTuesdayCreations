@@ -1,0 +1,234 @@
+---
+title: 'Tidy Tuesday 07-05-2022: San Francisco Rentals'
+output: html_document
+date: '2022-07-05'
+---
+
+## Acknowledgment
+
+I want to give a HUGE thank you to Lee Olney who published much of the source code I used to structure my data visualization. The link to Lee Olney's source code is [here](https://github.com/leeolney3/TidyTuesday/blob/main/2022/week_27/script.R).
+
+## The Data
+
+The week's Tidy Tuesday data comes from [Kate Pennington](https://www.katepennington.org/data), [data.sfgov.org](https://data.sfgov.org/Housing-and-Buildings/Building-Permits/i98e-djp9/data), [Vital Signs](https://www.vitalsigns.mtc.ca.gov/housing-production). The data consists of three data sets, which describe San Francisco's rental prices (scraped from Criagslist), lot permits, and new construction details.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggmap)
+library(maps)
+library(sf)
+library(ggrepel)
+library(priceR)
+library(lubridate)
+library(gridExtra)
+library(GGally)
+```
+
+```{r message=FALSE}
+rent <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-07-05/rent.csv')
+permits <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-07-05/sf_permits.csv')
+new_construction <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-07-05/new_construction.csv')
+```
+
+## Creating a Map Plot
+
+I have been wanting to create a map via ggplot2. To do this, I used an shp geo export via [Data SF](https://data.sfgov.org/Geographic-Locations-and-Boundaries/Realtor-Neighborhoods/5gzd-g9ns) to create blank map template. 
+
+```{r}
+shp1<- read_sf("data/RealtorNeighborhoods/geo_export_c3fbb2c0-873c-43c2-b73e-b89cb7a7cb7c.shp")
+
+shp1 <- shp1 %>%
+  rename(nhood = nbrhood)
+```
+
+
+There was lots and lots of data wrangling to extract the most amount of data about SF rentals. I did my best to convert many of the neighborhood labels to be equivalent to the shp1 labels -- though some were extrapolations based on Google searches etc as I am not from San Francisco. Luckily, the case_when terms can be added or deleted as new information comes in, which is a plus.
+
+```{r}
+san_fran <- rent %>%
+  filter(city == "san francisco") %>%
+  select(-address, -title, -descr,-county, -city, -details, -date) %>%
+  mutate(nhood = str_to_title(nhood)) %>%
+  mutate(nhood=case_when(nhood=="Buena Vista Park / Ashbury Hts / Corona Hts"~"Buena Vista Park/Ashbury Heights",
+                          nhood=="Financial District"~"Financial District/Barbary Coast",
+                          nhood=="West Portal / Forest Hills"~"West Portal",
+                         nhood == "Lakeshore" ~ "Lake Shore",
+                         nhood == "Marina / Cow Hollow" ~ "Marina",
+                         nhood == "North Beach / Telegraph Hill" ~ "North Beach",
+                         nhood == "Bernal" ~ "Bernal Heights",
+                         nhood == "Usf / Anza Vista" ~ "Anza Vista",
+                         nhood == "Cole Valley" ~ "Cole Valley/Parnassus Heights",
+                         nhood == "Excelsior / Outer Mission" ~ "Excelsior",
+                         nhood == "Civic / Van Ness" ~ "Van Ness/Civic Center",
+                         nhood == "Lower Pac Hts" ~ "Lower Pacific Heights",
+                         nhood == "Nopa" ~ "North Panhandle",
+                         nhood == "Soma / South Beach" ~ "South of Market",
+                         nhood == "Presidio Hts / Laurel Hts / Lake St" ~ "Presidio Heights",
+                         nhood == "Ccsf" ~ "Sunnyside",
+                         nhood == "Mission District" ~ "Inner Mission", 
+                         nhood == "Lower Haight" ~ "Hayes Valley",
+                         nhood == "Castro" ~ "Corona Heights",
+                         # not sure about this kind of extrapolation --> last 3 especially
+         TRUE~nhood))
+```
+
+
+I then summarized by neighborhood so there were common metrics to compare across neighborhoods, as well as years. I filtered out the neighborhoods with the lowest observations, where n was 4 or lower, and also I filtered out years in which there was less data on the map -- in this case I chose to filter out 2002-2006., leaving us with 2007 - 2018.
+
+```{r message=FALSE}
+summarization <- san_fran %>%
+  group_by(nhood = nhood, year) %>%
+  summarise(n=n(),
+            min=min(price),
+            max=max(price),
+            mean=mean(price),
+            median=median(price)) %>%
+  filter(year > 2006) %>%
+  filter(n > 5)
+```
+
+
+```{r eval = FALSE}
+## need to rewrite if grouped by year, rows are too short...so this code is NOT run right now
+
+summarization[nrow(summarization) +1,] <- c(list("Marina / Cow Hollow1", 3211, 500, 25000, 2936.969, 2349.0))
+summarization[nrow(summarization) +1,] <- c(list("North Beach / Telegraph Hill1", 1492, 400, 30000, 2910.743, 2375.0))
+summarization[nrow(summarization) +1,] <- c(list("Excelsior / Outer Mission1", 1036, 400, 5999, 1842.974, 1800.0))
+summarization[nrow(summarization) +1,] <-c(list("Soma / South Beach1", 4163, 270, 20000, 3585.901, 3374.0))
+summarization[nrow(summarization) +1,] <-c(list("Presidio Hts / Laurel Hts / Lake St1", 1010, 490, 22500, 3284.119, 2595.0))
+summarization[nrow(summarization) +1,] <-c(list("Presidio Hts / Laurel Hts / Lake St2", 1010, 490, 22500, 3284.119, 2595.0))
+
+
+summarization <- summarization %>%
+  mutate(nhood=case_when(nhood=="Marina / Cow Hollow1" ~ "Cow Hollow",
+                         nhood == "North Beach / Telegraph Hill1" ~ "Telegraph Hill",
+                         nhood == "Excelsior / Outer Mission1" ~ "Outer Mission",
+                         nhood == "Soma / South Beach1" ~ "South Beach",
+                         nhood == "Presidio Hts / Laurel Hts / Lake St1" ~ "Jordan Park / Laurel Heights",
+                         nhood == "Presidio Hts / Laurel Hts / Lake St2" ~ "Lake Street",
+                         TRUE ~ nhood))
+```
+
+```{r results='hide'}
+df <- shp1 %>% right_join(summarization,by = "nhood") %>%
+  filter(nhood != "Treasure Island" & nhood != "San Francisco") %>%
+  rename(Median_Rent = median)
+
+glimpse(df)
+```
+
+
+```{r}
+p1 <- df %>%
+  ggplot() +
+  geom_sf(data=shp1, fill=NA, size=.1)+
+  geom_sf(aes(fill=Median_Rent), size=.1)+
+    facet_wrap(~ year)+
+     cowplot::theme_map(11)+
+  theme(strip.text.x = element_text(size = 10, face = "bold"), legend.title = element_text(size =10, face = "bold"), legend.position="top",legend.text = element_text(size = 8), legend.key.width = unit(1.15, "cm"), plot.title = element_text(hjust = 0.5, size = 14))+
+  scale_fill_stepsn("Median Rent Prices by Neighborhood", colors = MetBrewer::met.brewer("Hokusai2"), labels = scales::dollar)+
+    guides(fill = guide_colorbar(title.position = "top"))+
+  labs(#title = "San Francisco Rent Prices from 2007-2018", caption = "Tidy Tuesday 07-05-2022"
+  )
+```
+
+I then did a symmetric map plot using the permit data. I wanted to see for lots whose current use and proposed use differ, how the proportion of lots whose proposed use is apartments differs between neighborhoods.  
+
+```{r}
+permits %>%
+  group_by(proposed_use) %>%
+  summarize(n = n()) %>%
+  arrange(desc(n))
+```
+
+```{r results = 'hide'}
+glimpse(permits)
+```
+```{r message=FALSE}
+permits_1 <- permits %>%
+  filter(proposed_use != existing_use) %>%
+  mutate(year = year(filed_date)) %>%
+   filter(proposed_use == "apartments") %>%
+  group_by(year, neighborhoods_analysis_boundaries) %>%
+  summarise(total_ap = n()) 
+```
+
+```{r message=FALSE}
+permits_2 <- permits %>%
+    filter(proposed_use != existing_use) %>%
+    mutate(year = year(filed_date)) %>%
+  select(neighborhoods_analysis_boundaries, proposed_use, year) %>%
+  group_by(year, neighborhoods_analysis_boundaries) %>%
+  summarise(total = n())
+
+newdf <- right_join(permits_1, permits_2) %>%
+  drop_na() %>%
+  mutate(prop = total_ap/total) %>%
+  rename(nhood = neighborhoods_analysis_boundaries)
+```
+
+```{r}
+df_new <- df %>% right_join(newdf, by = "nhood") %>%
+  select(-year.x) %>%
+  rename(year = year.y)
+```
+
+```{r}
+p2 <- df_new %>%
+  filter(year > 2006) %>%
+  ggplot() +
+  geom_sf(data=shp1, fill=NA, size=.1)+
+  geom_sf(aes(fill=prop), size=.1)+
+    facet_wrap(~ year)+
+     cowplot::theme_map(11)+
+  theme(strip.text.x = element_text(size = 10, face = "bold"), legend.title = element_text(size =10, face = "bold"), legend.position="top",legend.text = element_text(size = 8), legend.key.width = unit(1.15, "cm"), plot.title = element_text(hjust = 0.5, size = 14))+
+  scale_fill_stepsn("Percent of Apartments by Neighborhood", colors = rev(MetBrewer::met.brewer("Greek")), labels = scales::percent_format())+
+    guides(fill = guide_colorbar(title.position = "top"))+
+   labs(#title = "San Francisco Percentage of Apartments from 2007-2018", 
+     caption = "Tidy Tuesday 07-05-2022| GitHub: @scolando")
+```
+
+## The Plot
+
+Finally(!!) I plotted them together, so its easier to cross compare neighborhood's metrics for Median Rent Prices to Percent of New Construction Apartments. Per the correlation plot though, there is not strong linear correlation between these metrics in San Francisco neighborhoods.
+
+```{r message=FALSE, warning=FALSE}
+library(patchwork)
+p1 + ggtitle("Neighborhood Metrics for San Francisco", subtitle = "Looking at Median Rent Prices and Percent of New Construction that is Apartments") + theme(plot.title = element_text(size=12)) + p2
+
+ggsave("sanfran.png")
+```
+
+## Correlation Plots
+
+```{r message=FALSE}
+right_join(newdf,summarization, by = "nhood") %>%
+  rename(year = year.y) %>%
+  select(min, max, mean, median, year, total_ap, total, prop) %>%
+  drop_na() %>%
+  ggpairs()
+```
+
+
+```{r warning=FALSE, message=FALSE, fig.align='left'}
+library(ggcorrplot)
+
+right_join(newdf,summarization, by = "nhood") %>%
+  drop_na() %>%
+  select(prop, median, mean) %>%
+  cor() %>%
+  ggcorrplot(lab = TRUE, colors = c("#00AFBB", "#E7B800", "#FC4E07"), lab_col = "white")
+  
+  ggsave("corrplot.png", bg = "white")
+```
+
+## Praise
+
+*Just for funsies*
+
+```{r}
+library(praise)
+praise()
+```
+

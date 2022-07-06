@@ -60,6 +60,6 @@ yay_nottwofaced_companies <- subset(pride_sponsors, !(Company %in% pride_aggrega
   select(Company)
   
 
-yay_nottwofaced_companies
+head(yay_nottwofaced_companies, n = 10)
 ```
 
