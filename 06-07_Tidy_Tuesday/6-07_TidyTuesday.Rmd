@@ -4,13 +4,17 @@ output: html_document
 date: "2022-06-07"
 ---
 
+## The Data
+
+This week's data comes from [Data for Progress](https://www.dataforprogress.org/accountable-allies). The data details pride sponsors, such as Fortune 500 companies, that simultaneously donate to pride events and anti-LGTQ+ politicians. A major focus of Data for Progress's mission is to hold these corporations accountable for their actions.
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(treemapify)
 ```
 
-```{r message=FALSE, echo = FALSE}
+```{r message=FALSE}
 pride_aggregates <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-06-07/pride_aggregates.csv')
 fortune_aggregates <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-06-07/fortune_aggregates.csv')
 static_list <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-06-07/static_list.csv')
@@ -20,7 +24,9 @@ donors <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tid
 ```
 
 
-I think it would be cool to try to make a tree map using the problematic companies that are pride sponsors + fund anti-LGBTQ+ organizations and the size of each tile is relative to its funding of anti-LGBTQ+ org.
+## Creating a Tree Map
+
+I wanted to make a tree map for this week's Tidy Tuesday where the area a pride-sponsor Fortune 500 company takes up in the the plot is proportional to their donations to anti-LGTQ+ politicians. In order to keep the plot readable, I only included the 20 pride-sponsor Fortune 500 companies that donated the most to anti-LGTQ+ politicians. Much of the data wrangling done in the code blocks below were largely stylistic -- done to make the Tree Map prettier.
 
 ```{r}
 top_20_new <- fortune_aggregates %>%
@@ -39,6 +45,8 @@ top_20_new <- fortune_aggregates %>%
                              
 ```
 
+## The Plot
+
 ```{r}
 ggplot(top_20_new, aes(area = Total.Contributed, fill = Total.Contributed, label = paste(Company, paste("$",Total.Contributed, sep = ""), sep = "\n"), color = Total.Contributed)) +
   geom_treemap()+
@@ -47,10 +55,13 @@ ggplot(top_20_new, aes(area = Total.Contributed, fill = Total.Contributed, label
   theme(legend.position="none") +
   theme(plot.title = element_text(size = 12, face = "bold"))+
   scale_fill_gradient(low = "gray75", high = "gray15", space = "Lab")+
-  ggtitle("'Pride Sponsor' Fortune 500 Companies Donating the MOST to Anti-LGBTQ+ Politicians")
+  ggtitle("'Pride Sponsor' Fortune 500 Companies Donating the MOST to Anti-LGBTQ+ Politicians")+
+  labs(caption = "Tidy Tuesday 06-07-2022 | GitHub: @scolando")
 ```
 
-### A Subset of Non-Two-Faced Companies -- supporting NYC Pride!
+## A Subset of Non-Two-Faced Companies -- supporting NYC Pride!
+
+I included a short list of 20 randomly sampled pride sponsors for NYC pride that did not donate to anti_LGBTQ+ politicians. There are 125 such sponsors. Feel free to run the R-code chunk to see more of these pride sponsors.
 
 ```{r}
 yay_nottwofaced_companies <- subset(pride_sponsors, !(Company %in% pride_aggregates$Company)) %>%
@@ -60,6 +71,7 @@ yay_nottwofaced_companies <- subset(pride_sponsors, !(Company %in% pride_aggrega
   select(Company)
   
 
-head(yay_nottwofaced_companies, n = 10)
+sample_n(yay_nottwofaced_companies, 20)
 ```
+
 

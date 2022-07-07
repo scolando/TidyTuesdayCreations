@@ -6,6 +6,8 @@ My personal journal of Tidy Tuesday creations. See the folders in this repositor
 
 * 06/28/2022 [UK Gender Pay Gap](https://rpubs.com/scolando/Tidy-Tuesday-06-28-2022)
 
+* 06/07/2022 [Pride Corporate Accountability Project](https://rpubs.com/scolando/Tidy-Tuesday-06-07-2022)
+
 * 05/17/2022 [Eurovision](https://rpubs.com/scolando/Tidy-Tuesday-05-17-2022)
 
 * 03/22/2022 [Baby Names](https://rpubs.com/scolando/Tidy-Tuesday-03-22-2022)
