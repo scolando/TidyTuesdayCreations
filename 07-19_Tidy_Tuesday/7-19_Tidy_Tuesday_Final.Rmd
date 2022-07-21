@@ -103,7 +103,7 @@ tech_energy$label <- factor(tech_energy$label, levels = c("Electricity from coal
 ```{r fig.width=15,fig.height=7}
 tech_plot_1 <- tech_energy %>%
   ggplot(aes(x = year, y = value))+
-  xlim(c(1980,2020))+
+  xlim(c(1985,2020))+
   geom_point(size = .5, aes(color = label))+
   geom_line(aes(color = label))+
     facet_wrap(~country_name, scales = "free_y")+
@@ -112,7 +112,7 @@ tech_plot_1 <- tech_energy %>%
   theme(legend.position = "top", legend.justification = "left", legend.title = element_text(face = "bold"), title = element_text(size = 15), legend.text = element_text(color = "black",size = 11), axis.title = element_text(face = "bold"), legend.background = element_rect(fill = "gray95"), axis.text = element_text(color = "black"), strip.text = element_text(color = "black", face = "bold"))+
   guides(color = guide_legend(title.position = "top", title = "Energy Production Type"))+
   ylab("Annual Number of Terrawatt hours (TWh)")+
-  xlab("Year (1980-2020)")+
+  xlab("Year (1985-2020)")+
   ggtitle("Comparing Types of Energy Production by Country")+
   theme(plot.title = element_text(size = 17, face = "bold", hjust = 0.5))+
   labs(caption ="Tidy Tuesday 07-19-2022 | GitHub: @scolando")+
@@ -131,16 +131,16 @@ One **very** important note is the y-axis scales change for each country. Below 
 ```{r fig.width=15,fig.height=7}
 tech_plot_2 <- tech_energy %>%
   ggplot(aes(x = year, y = value))+
-  xlim(c(1980,2020))+
+  xlim(c(1985,2020))+
   geom_point(size = .5, aes(color = label))+
   geom_line(aes(color = label))+
     facet_wrap(~country_name)+
   scale_color_manual(values = park_palette("smoky_mountains2", n = 8))+
   theme_bw()+
   theme(legend.position = "top", legend.justification = "left", legend.title = element_text(face = "bold"), title = element_text(size = 15), legend.text = element_text(color = "black",size = 11), axis.title = element_text(face = "bold"), legend.background = element_rect(fill = "gray95"), axis.text = element_text(color = "black"), strip.text = element_text(color = "black", face = "bold"))+
-  guides(color = guide_legend(title.position = "top", title = "Energy Usage Type"))+
+  guides(color = guide_legend(title.position = "top", title = "Energy Production Type"))+
   ylab("Annual Number of Terrawatt Hours (TWh)")+
-  xlab("Year (1980-2020)")+
+  xlab("Year (1985-2020)")+
   ggtitle("Comparing Types of Energy Production by Country")+
   theme(plot.title = element_text(size = 14, face = "bold", hjust = 0.5))+
   labs(caption ="Tidy Tuesday 07-19-2022 | GitHub: @scolando")+
