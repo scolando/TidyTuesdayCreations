@@ -1,0 +1,155 @@
+---
+title: "7-19-2022 Tidy Tuesday: Technology Consumption"
+output: html_document
+date: '2022-07-19'
+---
+
+## The Data
+
+This week's Tidy Tuesday Data comes is about Technology Adoption and comes from [data.nber.org](https://data.nber.org/data-appendix/w15319/). The data details technology production and consumption over time for different countries. For more information read the [working paper](https://www.cgdev.org/sites/default/files/technology-and-development-exploration-data.pdf). 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+## data wrangling
+library(tidyverse)
+library(countrycode)
+library(lubridate)
+## fun color palettes!
+library(paRkpal)
+## just for hype-up
+library(praise)
+```
+
+#### Loading the Data
+
+```{r message=FALSE}
+technology <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-07-19/technology.csv')
+```
+Glimpse of what the data looks like:
+
+```{r}
+head(technology)
+```
+```{r}
+technology %>%
+  filter(category == "Energy") %>%
+  group_by(group) %>%
+  count()
+```
+
+
+I then used the countrycode package to change the ISO3c codes to country names. A few were left off, so I manually added them after. I used an analogous procedure to extract the continents.  
+
+```{r warning = FALSE}
+technology_country <- technology %>%
+  mutate(country_name = countrycode(iso3c, origin = 'iso3c', destination = 'country.name')) %>%
+  mutate(country_name = case_when(
+    iso3c == "ANT" ~ "Netherlands Antilles",
+    iso3c == "CSK" ~ "Czechoslovakia",
+    iso3c == "ROM" ~ "Romania",
+    iso3c == "XKX" ~ "Kosovo",
+    iso3c == "XCD" ~ "Carribean", #not totally sure on this one
+    TRUE ~ country_name)) %>%
+  mutate(continent = countrycode(country_name, origin = 'country.name', destination = 'continent')) %>%
+  mutate(continent = case_when(
+    country_name == "Kosovo" ~ "Europe",
+    country_name == "Antarctica" ~ "Antarctica",
+    country_name == "Czechoslovakia" ~ "Europe",
+    country_name == "Carribean" ~ "Americas",
+    TRUE ~ continent))
+```
+
+Then I looked at the group and category to see what options I had to work with for creating a data visualization.
+
+```{r}
+technology_country %>%
+  select(group,category) %>%
+  group_by(group,category) %>%
+  unique()
+```
+
+### Energy!
+
+I ultimately decided to focus on energy production per country. I first created a new data frame filtered to to find the top 20 countries by average energy production. Then I used this to filter a data frame, called 'tech_energy'. 
+
+```{r}
+tech_energy_avg <- technology_country %>%
+  filter(category == "Energy") %>%
+  filter(label == "Electric power consumption (KWH)") %>%
+  group_by(country_name) %>%
+  summarize(mean_val = mean(value)) %>%
+  arrange(desc(mean_val)) 
+
+top_tech_energy_avg <- tech_energy_avg %>%
+  slice_head(n = 20)
+```
+
+```{r}
+tech_energy <- technology_country %>%
+  filter(category == "Energy") %>%
+  #grepl regex helps to limit energy consumption only to energy types
+  filter(grepl("from",label)) %>%
+  #mutate_at removes the expression in parentheses
+  mutate_at("label", str_replace, "(?=\\().*?(?<=\\))", "") %>%
+  filter(country_name %in% top_tech_energy_avg$country_name)
+
+## factor helps to rearrange the legend in the subsequent plots
+
+tech_energy$label <- factor(tech_energy$label, levels = c("Electricity from coal ", "Electricity from oil ", "Electricity from gas ", "Electricity from nuclear ", "Electricity from hydro ", "Electricity from wind ", "Electricity from solar ", "Electricity from other renewables "))
+```
+
+## The Plots
+
+```{r fig.width=15,fig.height=7}
+tech_plot_1 <- tech_energy %>%
+  ggplot(aes(x = year, y = value))+
+  xlim(c(1980,2020))+
+  geom_point(size = .5, aes(color = label))+
+  geom_line(aes(color = label))+
+    facet_wrap(~country_name, scales = "free_y")+
+  scale_color_manual(values = park_palette("smoky_mountains2", n = 8))+
+  theme_bw()+
+  theme(legend.position = "top", legend.justification = "left", legend.title = element_text(face = "bold"), title = element_text(size = 15), legend.text = element_text(color = "black",size = 11), axis.title = element_text(face = "bold"), legend.background = element_rect(fill = "gray95"), axis.text = element_text(color = "black"), strip.text = element_text(color = "black", face = "bold"))+
+  guides(color = guide_legend(title.position = "top", title = "Energy Production Type"))+
+  ylab("Annual Number of Terrawatt hours (TWh)")+
+  xlab("Year (1980-2020)")+
+  ggtitle("Comparing Types of Energy Production by Country")+
+  theme(plot.title = element_text(size = 17, face = "bold", hjust = 0.5))+
+  labs(caption ="Tidy Tuesday 07-19-2022 | GitHub: @scolando")+
+  theme(plot.background = element_rect(fill = "gray95"))
+
+tech_plot_1
+```
+
+One **very** important note is the y-axis scales change for each country. Below is what the graphs look like when the scales are fixed, that is, there is a constant y-axis for each country.
+
+```{r fig.width=15,fig.height=7}
+tech_plot_2 <- tech_energy %>%
+  ggplot(aes(x = year, y = value))+
+  xlim(c(1980,2020))+
+  geom_point(size = .5, aes(color = label))+
+  geom_line(aes(color = label))+
+    facet_wrap(~country_name)+
+  scale_color_manual(values = park_palette("smoky_mountains2", n = 8))+
+  theme_bw()+
+  theme(legend.position = "top", legend.justification = "left", legend.title = element_text(face = "bold"), title = element_text(size = 15), legend.text = element_text(color = "black",size = 11), axis.title = element_text(face = "bold"), legend.background = element_rect(fill = "gray95"), axis.text = element_text(color = "black"), strip.text = element_text(color = "black", face = "bold"))+
+  guides(color = guide_legend(title.position = "top", title = "Energy Usage Type"))+
+  ylab("Annual Number of Terrawatt Hours (TWh)")+
+  xlab("Year (1980-2020)")+
+  ggtitle("Comparing Types of Energy Production by Country")+
+  theme(plot.title = element_text(size = 14, face = "bold", hjust = 0.5))+
+  labs(caption ="Tidy Tuesday 07-19-2022 | GitHub: @scolando")+
+  theme(plot.background = element_rect(fill = "gray95"))
+
+tech_plot_2
+```
+
+Also, my absolute favorite part of this Tidy Tuesday was looking through the National Park palette options. Definitely check out github, there are a myriad of fantastic user-created packages with beautiful color palettes. 
+
+
+#### Praise (just because)
+
+```{r}
+praise()
+```
+
