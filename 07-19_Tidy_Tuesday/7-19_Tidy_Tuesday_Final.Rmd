@@ -121,6 +121,11 @@ tech_plot_1 <- tech_energy %>%
 tech_plot_1
 ```
 
+```{r echo = FALSE}
+ggsave("tech_plot_1.png", tech_plot_1, width = 15, height = 7)
+```
+
+
 One **very** important note is the y-axis scales change for each country. Below is what the graphs look like when the scales are fixed, that is, there is a constant y-axis for each country.
 
 ```{r fig.width=15,fig.height=7}
@@ -142,6 +147,10 @@ tech_plot_2 <- tech_energy %>%
   theme(plot.background = element_rect(fill = "gray95"))
 
 tech_plot_2
+```
+
+```{r echo = FALSE}
+ggsave("tech_plot_2.png", tech_plot_2, width = 15, height = 7)
 ```
 
 Also, my absolute favorite part of this Tidy Tuesday was looking through the National Park palette options. Definitely check out github, there are a myriad of fantastic user-created packages with beautiful color palettes. 
