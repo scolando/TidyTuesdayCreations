@@ -1,0 +1,328 @@
+---
+title: "08-02-2022 Tidy Tuesday: Oregon Spotted Frog"
+output: html_document
+date: "2022-08-02"
+---
+
+## The Data
+
+This week's Tidy Tuesday data is about the Oregon Spotted Frog. The data comes from [USGS](https://www.usgs.gov/centers/forest-and-rangeland-ecosystem-science-center/science/oregon-spotted-frog). This data set focuses on Oregon Spotted Frog demographics at the Crane Prairie Reservoir in Oregon.
+
+## My Focus
+
+This week was a bit of a switch up from previous weeks. I had done some shapefile/map graphing via ggplot2 in the last few Tidy Tuesday's, so I paired some simpler map plots with a logistic regression to predict if there was a visuals of a frog (i.e. Detection is "Visual" or "Captured"). 
+
+Given I know next to nothing about Oregon Spotted Frogs and also there are many levels of the categorical variables in the data frame, I opted to use Lasso to select the predictor variables in my logistic regression. This was my first ever time doing logistic regression in R, so I still have a lot to learn, but it was great to try it out.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(sf)
+library(osmdata)
+```
+
+#### Reading in the Data Set
+
+```{r message=FALSE, warning=FALSE}
+frogs <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-08-02/frogs.csv')
+```
+
+## Data Wrangling
+
+I began by converting the UTM coordinates to longitude and latitude to use "osmaps". The structure of this code is largely adapted from Jonathon Kitt. The link to the code I implemented is [here](https://github.com/KittJonathan/tidytuesday/blob/master/R/2022_08_02_frogs.R).
+
+```{r}
+utm_coords <- frogs %>%
+  select(UTME_83, UTMN_83)
+```
+
+```{r}
+longlat_coords <- st_as_sf(x = utm_coords,  
+                           coords = c("UTME_83", "UTMN_83"),
+                           crs = "+proj=utm +zone=10") %>%
+  st_transform(crs = "+proj=longlat +datum=WGS84") %>%
+  as_tibble()
+```
+
+```{r}
+list_long <- list()
+list_lat <- list()
+```
+
+```{r}
+for (i in 1:nrow(longlat_coords)){
+  list_long[[i]] <- longlat_coords$geometry[[i]][1]
+  list_lat[[i]] <- longlat_coords$geometry[[i]][2]
+}
+```
+
+```{r}
+frogs <- frogs %>%
+  mutate(longitude = unlist(list_long),
+         latitude = unlist(list_lat)) %>%
+  select(-UTME_83, -UTMN_83)
+```
+
+```{r}
+crane_prairie_water <- opq(bbox = c(-121.7920729, 43.7938767, -121.76501, 43.81433)) %>%
+    add_osm_feature(key = 'natural', value = 'water') %>%
+  osmdata_sf()
+```
+
+```{r}
+frogs <- frogs %>%
+    mutate(Female = case_when(
+    Female == 1 ~ "Female",
+    TRUE~ "Male"))
+```
+
+## First Round of Plots
+
+```{r}
+p <- ggplot()+
+  geom_sf(data = crane_prairie_water$osm_polygons, inherit.aes = FALSE, fill = "lightcyan2")+
+  cowplot::theme_map(11)+
+  geom_point(data = frogs, aes(x = longitude, y = latitude, color = Subsite), alpha = .75, size = 1)+
+  theme(panel.background = element_rect(fill = 'seashell2'), legend.position="left", title = element_text(size = 14), legend.title = element_text(size = 12, face = "bold"))+
+  guides(color = guide_legend(title.position = "top", title = "Subsite"))+
+  labs(subtitle = "Visualizing Oregon Spotted Frog Demographics based on Location")
+```
+```{r}
+q <- ggplot()+
+  geom_sf(data = crane_prairie_water$osm_polygons, inherit.aes = FALSE, fill = "lightcyan2")+
+  cowplot::theme_map(11)+
+  geom_point(data = frogs, aes(x = longitude, y = latitude, color = as_factor(Female)), alpha = .75, size = 1)+
+  theme(panel.background = element_rect(fill = 'seashell2'), legend.position="right", legend.title = element_text(size = 12, face = "bold"))+
+  guides(color = guide_legend(title.position = "top", title = "Sex"))
+```
+
+```{r}
+library(patchwork)
+p + ggtitle("Oregon Spotted Frog Demographics") + q + labs(caption ="Tidy Tuesday 07-12-2022 | GitHub: @scolando") 
+```
+
+
+It is important to note that many of these observations come from the same frog. Many detected frogs in this data frame come from the same frog (i.e. the same frequency), so not every dot on the data frame represents a unique frog. See the data frame below:
+
+```{r}
+frogs %>%
+  group_by(Frequency,Subsite, Female) %>%
+  count() %>%
+  arrange(desc(n))
+```
+## Logistic Regression
+
+I next moved onto logistic regression! I used the "Detection" variable to create a binary outcome -- seen or not seen.
+
+```{r}
+frogs_new <- frogs %>%
+  mutate(Detection = case_when(
+    Detection == "Captured" ~ "Seen",
+    Detection == "Visual" ~ "Seen",
+    TRUE ~ "Not Seen")) %>%
+  mutate(Detection = as_factor(Detection))
+```
+
+I then created the test and training data split and also removed unmeaningful predictors from the data set.
+
+```{r}
+library(rsample)
+
+set.seed(47)
+
+frogs_new2 <- frogs_new %>%
+    select(-Site,-SurveyDate, -Frequency, -Interval)
+  frogs_split <- initial_split(frogs_new2)
+frogs_train <- training(frogs_split)
+frogs_test <- testing(frogs_split)
+```
+
+
+As I mentioned earlier, I wanted to use Lasso to select the variables. I used a workflow to implement Lasso -- so my first step was to create a recipe.
+
+```{r message=FALSE, warning=FALSE}
+library(recipes)
+
+frogs_rec <- recipe(Detection ~ ., data = frogs_train) %>%
+  step_dummy(all_nominal_predictors()) %>%
+  step_zv(all_numeric(), -all_outcomes()) %>%
+  step_normalize(all_numeric(), -all_outcomes())
+```
+
+```{r}
+library(parsnip)
+lasso_spec_tune <- logistic_reg(mixture = 1, penalty = tune()) %>% # mixture = 1 denotes Lasso
+  set_mode("classification") %>% #need classification mode to do logistic regression
+  set_engine("glmnet")
+```
+
+To select the lambda (or penalty) value for Lasso, I did cross-validation on the training set. 
+
+```{r warning=FALSE, message=FALSE}
+library(dials)
+library(workflows)
+library(tune)
+
+set.seed(1234)
+frogs_fold <- vfold_cv(frogs_train)
+
+lasso_grid <- grid_regular(penalty(range = c(-5, 5)), levels = 50)
+
+lasso_wf <- workflow() %>%
+  add_recipe(frogs_rec)
+
+lasso_fit <- lasso_wf %>%
+  add_model(lasso_spec_tune) %>%
+  fit(data = frogs_train)
+
+# this is the line that tunes the model using cross validation
+set.seed(2020)
+lasso_cv <- tune_grid(
+  lasso_wf %>% add_model(lasso_spec_tune),
+  resamples = frogs_fold,
+  grid = lasso_grid
+)
+```
+
+#### Determining the Optimal Penalty
+
+I then used the two outputted prediction metrics -- accuracy and roc_auc -- to choose the best lambda value. 
+
+```{r}
+collect_metrics(lasso_cv) %>%
+  filter(.metric == "accuracy") %>%
+  arrange(desc(mean))
+```
+
+```{r}
+collect_metrics(lasso_cv) %>%
+  filter(.metric == "roc_auc") %>%
+  arrange(desc(mean))
+```
+
+
+```{r}
+lasso_cv %>%
+  collect_metrics() %>%
+  ggplot(aes(x = penalty, y = mean, color = .metric)) + 
+  geom_errorbar(aes(
+    ymin = mean - std_err,
+    ymax = mean + std_err),
+    alpha = 0.5) + 
+  geom_line(size = 1.5) + 
+  scale_x_log10()+
+    theme_minimal()
+```
+
+In an effort to best optimize the accuracy and auc_roc, I chose $\lambda = 0.01842069969$. This lambda corresponded with a high accuracy and a relatively high auc_roc.
+
+```{r warning=FALSE}
+lasso_cv %>%
+  collect_metrics() %>%
+  ggplot(aes(x = penalty, y = mean, color = .metric)) + 
+  geom_errorbar(aes(
+    ymin = mean - std_err,
+    ymax = mean + std_err),
+    alpha = 0.5) + 
+  geom_line(size = 1.5) + 
+  scale_x_log10()+
+  ylim(c(.75,1))+
+  geom_vline(xintercept = 0.01842069969)+
+  theme_minimal()
+```
+```{r}
+best_lasso <- tibble(penalty = 0.01842069969,
+                         .config = "Preprocessor1_Model17")
+best_lasso
+```
+The workflow was then finalized with the best Lasso penalty to generate predictor variable coefficients -- see how most of them go to 0 and we are only left with 14 parameters!
+
+### Variables/Coefficients in the Model
+
+```{r}
+finalize_workflow(lasso_wf %>% add_model(lasso_spec_tune), best_lasso) %>%
+  fit(data = frogs_test) %>% tidy() %>%
+  filter(estimate != 0)
+```
+
+### Visualizing the Logistic Regression
+
+The next step was to predict on the test data. Honestly, I felt kind of rocky about this part and am not sure I did it right. I do think I learned a lot from going through this process though and trying to visualize the logistic regression fit.
+
+```{r}
+lasso_winner_spec <- logistic_reg(mixture = 1, penalty = 0.0184207) %>%
+  set_mode("classification") %>%
+  set_engine("glmnet")
+
+lasso_winner_wf <- workflow() %>%
+  add_recipe(frogs_rec)
+
+lasso_winner <- lasso_winner_wf %>%
+  add_model(lasso_winner_spec) %>%
+  fit(data = frogs_train)
+
+lasso_new <- lasso_winner %>%
+  tidy()
+```
+
+```{r}
+lasso_aug <- lasso_winner %>%
+  augment(new_data = frogs_test) #this is what generates the predictions
+```
+
+The dotted red line is the threshold I set (0.5) for the class. Anything above 0.5 corresponds to "Seen" Detection (i.e. captured or visual) and anything below 0.5 corresponds to "Not Seen" (i.e. no visual). The red points are those that were improperly classified by our logistic regression model
+
+```{r message=FALSE}
+library(gghighlight)
+
+lasso_aug %>%
+  mutate(Detection = case_when(
+    Detection == "Seen" ~ 1,
+    TRUE ~ 0
+  )) %>%
+  ggplot(aes(y=Detection, x = .pred_Seen))+
+  geom_point(aes(color=ifelse(.pred_Seen < 0.5 & Detection == 1, 'red', 'black')))+
+   stat_smooth(method="glm", color="skyblue", se=FALSE,
+                method.args = list(family=binomial))+
+  geom_vline(xintercept = 0.5, linetype = "dotted", color = "red")+
+  scale_color_identity()+
+  theme_minimal()+
+  xlab("Predicted Detection Type")+
+  ylab("True Detection Type")
+```
+
+### Faceting by Sex of the Detected Frog
+
+We can then see that the overall logistic regression fit does not tell the full story. In fact, our model looks worse when we facet by sex of the detected frog -- especially if the detected frog is female. In general, it doesn't seem like this logistic regression model has high predicted power -- especially for seen female frogs.
+
+```{r message=FALSE}
+lasso_aug %>%
+  mutate(Detection = case_when(
+    Detection == "Seen" ~ 1,
+    TRUE ~ 0
+  )) %>%
+  ggplot(aes(y=Detection, x = .pred_Seen))+
+  geom_point(aes(color = ifelse(.pred_Seen < 0.5 & Detection == 1, 'red', 'black')))+
+   stat_smooth(method="glm", color="skyblue", se=FALSE,
+                method.args = list(family=binomial))+
+  geom_vline(xintercept = 0.5, linetype = "dotted", color = "red")+
+    scale_color_identity()+
+  theme_minimal()+
+  facet_wrap(~Female)
+```
+
+One hypothesis for why this model is so bad with female seen frogs is because there were not many in the training set. I would need to look into this more, but as a stand-in, I looked at the count of female seen frogs in the whole data set (Female = 1 when the frog is female). There is definitely a skew of not-seen female frogs but it seems like seen female frog counts is comparable to all the other groups below.
+
+```{r}
+lasso_aug %>%
+  group_by(Detection, Female) %>%
+  count()
+```
+
+Finally, it would not be a Tidy Tuesday without some praise. Slowly, the praise package is becoming my favorite (very user friendly lol).
+
+```{r}
+library(praise)
+praise()
+```
+
