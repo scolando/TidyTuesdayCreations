@@ -15,3 +15,5 @@ My personal (passion project) journal of Tidy Tuesday creations. See the folders
 * 05/17/2022 [Eurovision](https://rpubs.com/scolando/Tidy-Tuesday-05-17-2022)
 
 * 03/22/2022 [Baby Names](https://rpubs.com/scolando/Tidy-Tuesday-03-22-2022)
+
+* 01/25/2022 [Board Games](https://rpubs.com/scolando/Tidy-Tuesday-01-25-2022)

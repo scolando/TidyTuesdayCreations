@@ -1,0 +1,171 @@
+---
+title: "01-25-2022 Tidy Tuesday: Board Games"
+output: html_document
+date: "2022-01-25"
+---
+
+## The Data
+
+This data comes from Tidy Tuesday 01/25/2022 and is about Board Game details + ratings. I just used the ratings data set though there is a lot of info in the details data set that would be cool to use. Also, as a caveat, this project was totally for fun (and out of boredom from a slew of covid-positive close contacts). So, actually making the board game plot was a little tedious and usually I would have strayed away from given it involved a lot of manual entry, but hey! right now I am made of time. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+```{r message=FALSE, warning=FALSE}
+ratings <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-01-25/ratings.csv')
+details <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-01-25/details.csv')
+```
+```{r}
+ratings %>%
+  head()
+```
+
+```{r}
+board_games <- full_join(details, ratings, by = "id") %>%
+  select(-num.x, -num.y, -name)
+```
+
+```{r}
+board_games %>%
+  head()
+```
+
+## Top 10 Board Games
+
+```{r}
+top_10 <- ratings %>%
+  filter(users_rated > 866) %>%
+  arrange(desc(average)) %>%
+   slice(1:10)
+
+top_10 <- left_join(top_10, details, by = "id") %>%
+  select(-num.x, -num.y, -primary, -boardgameimplementation, -boardgameexpansion, -boardgamefamily)
+```
+
+
+```{r}
+top_10 %>%
+  glimpse()
+```
+
+
+```{r}
+top_10$rating_group <- cut(top_10$users_rated, 10)
+
+top_10$avg_group <- cut(top_10$average, 10)
+```
+
+```{r warning=FALSE, message=FALSE}
+library(RCurl)
+library(grid)
+```
+
+```{r}
+rating_list <- rep(unique(top_10$rating_group), 10)
+avg_list <- rep(unique(unique(top_10$avg_group)), 10)
+```
+
+```{r}
+top_10_mod <- top_10 %>%
+  select(name,rating_group, avg_group)
+```
+
+```{r}
+df2 <- data.frame(matrix(c(rating_list, avg_list), nrow = 40, ncol = 2)) %>%
+  rename(rating_group = X1, avg_group = X2) %>%
+  mutate(name = NA) %>%
+  select(name, everything()) %>%
+  anti_join(top_10_mod, by = c("rating_group","avg_group"))
+```
+
+
+```{r}
+df_new <- bind_rows(top_10_mod, df2)
+
+df_new <- df_new %>%
+  mutate(name = case_when(
+    name == "Aeon's End: The New Age" ~ "Aeon's End: \n The New \n Age",
+    name == "Brass: Birmingham" ~ "Brass: \n Birmingham",
+    name == "Middara: Unintentional Malum – Act 1" ~ "Middara: \n Unintentional \n Malum \n – Act 1",
+    name == "Too Many Bones: Undertow" ~ "Too Many \n Bones: \n Undertow",
+    name == "Clank!: Legacy – Acquisitions Incorporated" ~ "Clank!: \n Legacy \n & \n Ark Nova",
+    name == "Twilight Imperium: Fourth Edition" ~ "Twilight \n Imperium & \n Gloomhaven: \n Jaws of \n the Lion",
+    name == "Eclipse: Second Dawn for the Galaxy" ~ "Eclipse: \n Second Dawn \n for the \n Galaxy",
+    TRUE ~ name
+  )) %>%
+  filter(name != "Ark Nova" & name != "Gloomhaven: Jaws of the Lion" | is.na(name))
+```
+
+## The Plot
+
+```{r}
+library(ggstar)
+```
+
+```{r warning = FALSE}
+plot <- df_new %>%
+ggplot(aes(x = rating_group, y = avg_group, fill = name))+
+  geom_tile(size = 0.5, color="black")+
+  geom_text(aes(label=name), size = 3, color = "white", fontface = "bold")+
+    geom_rect(xmin = 2.5, xmax = 3.5, ymin = 4.5, ymax = 5.5, alpha = .2, fill = "lightyellow", size = .5, color = "black")+
+  geom_rect(xmin = 2.5, xmax = 3.5, ymin = 3.5, ymax = 4.5, alpha = .2, fill = "lightyellow", size = .5, color = "black")+
+  annotate("text", x = 2, y=1, label = "Aeon's End: \n 8.67/10 stars \n & \n 1757 reviews", size = 3)+
+  annotate("text", x = 4, y=1, label = "Brass: \n Birmingham \n 8.66/10 stars \n & \n 25484 reviews", size = 3)+
+  annotate("text", x = 3, y=2, label = "Eclipse: \n 8.68/10 stars \n & \n 5373 reviews", size = 3)+
+  annotate("text", x = 4, y=2, label = "Twilight and \n Gloomhaven: Jaws \n 8.68/10 stars \n & \n Twilight: 16025 \n Gloomhaven: 15918 \n Reviews", size = 2)+
+  annotate("text", x = 3, y=5, label = "Middara: \n 8.84/10 stars \n & \n 1581 reviews", size = 3)+
+  annotate("text", x = 4, y=3, label = "Clank!: \n Legacy: \n 8.70/10 stars \n & \n 4935 reviews", size = 3)+
+  annotate("text", x = 2, y=3, label = "Ark Nova: \n 8.70/10 stars \n & \n 1495 reviews", size = 3)+
+  annotate("text", x = 3, y=4, label = "Gloomhaven: \n 8.74/10 stars \n & \n 47827 reviews", size = 3)+
+  annotate("text", x = 2, y=4, label = "Too Many \n Bones: \n 8.74/10 stars \n & \n 2100 reviews", size = 3)+
+  coord_equal()+
+  geom_star(x = 3, y = 3, fill = "orange", color = "orange", starshape = 1, size = 20, alpha = .8)+
+  geom_star(x = 2, y = 5, fill = "orange", color = "orange", starshape = 1, size = 20, alpha = .8)+
+  geom_rect(xmin = 3.5, xmax = 4.5, ymin = 4.5, ymax = 5.5, alpha = .2, fill = "lightblue1", size = .5, color = "black")+
+  annotate("text", x = 4, y=5, label = "FINISH!", size = 6, fontface = "bold", color = "blue")+
+  theme_minimal()+
+  theme(legend.position = "none", plot.title = element_text(face = "bold", size = 17), plot.title.position = "panel", axis.title = element_text(face = "bold"), axis.text = element_blank(), plot.background = element_rect(fill = "white"))+
+  scale_fill_brewer(palette = "Dark2", na.value = "white")+
+  ggtitle("Top 10 Board Games", subtitle = "Yellow = Best Board Game for Some Metric")+
+  xlab("Number of User Ratings (Increasing Left to Right)")+
+  ylab("Average User Rating (Increasing Bottom to Top)")+
+  labs(caption="Tidy Tuesday 01/25/2022 | Github: @scolando")
+```
+
+```{r warning=FALSE, fig.height=7, fig.width=5, results='hold'}
+plot
+```
+
+
+```{r warning=FALSE}
+ggsave("boardgames.png", plot)
+```
+
+## Extraneous Code
+
+```{r message=FALSE, warning=FALSE}
+library(png)
+library(jpeg)
+```
+
+```{r works but generated graphics are awful quality}
+## did not end up using this part, orginally the sqaures were going to have to game thumbnails via the urls included in the details data frame, but the resolution was terrible and it involved a lot of annotation to get them in -- that said totally welcome people with more willpower and better grob skills to try this out!
+for(i in 1:10){
+  if(grepl("jpg", top_10$thumbnail[i]) == "TRUE"){
+    img <- readJPEG(getURLContent(top_10$thumbnail[i]))
+    img_new <- rasterGrob(img, interpolate=TRUE)
+    assign(paste0("image_",i),img_new)}
+    else{
+      img <- readPNG(getURLContent(top_10$thumbnail[i]))
+      img_new <- rasterGrob(img, interpolate=TRUE)
+      assign(paste0("image_",i),img_new)}
+}
+```
+
+```{r}
+praise::praise()
+```
+
+
