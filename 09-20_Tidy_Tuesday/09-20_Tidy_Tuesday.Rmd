@@ -1,0 +1,77 @@
+---
+title: "Tidy Tuesday 09-20-2022: Wastewater Plants"
+output: html_document
+date: "2022-09-20"
+---
+
+## The Data
+
+This week's TidyTuesday data comes from [Macedo et al, 2022](https://figshare.com/articles/dataset/HydroWASTE_version_1_0/14847786/1) by way of [Data is Plural](https://www.data-is-plural.com/archive/2022-05-04-edition/). For this week's code post I explain a little more about what I added/why I added it (given sf objects are not very easy to work with in R and its sometimes hard to find a helpful vignette).
+
+## Packages
+
+To start off, I loaded packages into the rmd file. The main three packages for this code to run smoothly are "sf", "rnaturalearth", and "tidyverse". "sf" and "rnaturalearth" allow you to get the world map imported into the local environment and plotted in ggplot2. Meanwhile, "tidyverse" is generally just helpful for wrangling. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(sf)
+library(tidyverse)
+library(rnaturalearth)
+library(cowplot)
+```
+
+Then, the data was read in from the TidyTuesday GitHub repo.
+
+```{r message=FALSE, warning=FALSE}
+Hydro <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-09-20/HydroWASTE_v10.csv')
+```
+### Loading in the Map (SF object)
+
+Then, I created a world data frame which contains a "geometry" column (i.e., is a sf object that can be plotted in ggplot2).
+
+```{r}
+world <- ne_countries(scale = "medium", returnclass = "sf") #ne_countries comes from rnaturalearth package
+```
+
+## Data Wrangling
+
+The data wrangling for sf objects may be the most confusing part, but also one of the most essential. We want to left_join the data we want to plot to the sf data frame object by a common column so that the data we want to plot is aligned with a "geometry" column -- this was if you wanted to use FILL etc. in gggplot2 you would be able to without too much hassle.
+
+```{r}
+df <- left_join(Hydro, world, by = c("CNTRY_ISO" = "iso_a3")) %>%
+  drop_na(DF) %>% #removes NAs
+  mutate(DF_class = if_else(DF < 10, "Acceptable DF", "High DF")) #in the description a DF less than 10 was considered an environmental concern.
+```
+
+I then split the data frame into two sets based on if the DF was unacceptable or not. This was to make the points be colored differently/show up better on the plot later on. 
+
+```{r}
+df_1 <- df %>%
+  filter(DF_class == "Acceptable DF")
+
+df_2 <- df %>%
+  filter(DF_class == "High DF")
+```
+
+## The Plot
+
+Finally, we were able to plot. To create a map, you first need to utilize "geom_sf" with the data coming from a data frame with a "geometry" column. I included not aesthetics as I just wanted the outlined plot without any information in it to begin with. Then, I added my data from df_1 and df_2. The plot's axes are longitude and latitude. So, I took those to be the aesthetics and then plotted geom_points, where the concerning DFs were colored based on their value. After the geom_points were added, the rest of the plot code is merely for design purposes -- although I think this is the best part :) 
+
+```{r}
+ggplot() +
+    geom_sf(data = world, fill = "grey15", color = "grey20")+
+    geom_point(data = df_2, aes(x = LON_OUT, y = LAT_OUT), color = "#EB9C5C", size = .1, alpha = 0.1)+
+  geom_point(data = df_1, aes(x = LON_OUT, y = LAT_OUT, color = DF), size = .3)+
+    theme_cowplot(12)+
+  theme(title = element_text(color = "grey90", size = 8, face = "italic"), legend.position = "top", axis.title = element_blank(), panel.background = element_rect(fill = "grey35"), plot.background = element_rect(fill = "grey35"), legend.text = element_text(color = "grey92"), legend.title = element_text(color = "grey92", face = "italic"), plot.title = element_text(hjust = 0.5, size = 20, color = "grey92", face = "bold"), plot.subtitle = element_text(hjust = 0.5))+
+    scale_color_stepsn(colors = MetBrewer::met.brewer("Hokusai2"))+
+  guides(color = guide_colorbar(nbin = 10, title.position = "top", title = "Dilution Factors", barwidth = 8))+
+  labs(caption = "09-20-2022 Tidy Tuesday | Github: @scolando", title = "World Map of Dilution Factors", subtitle = "According to Macedo et al. 2022, '2533 plants show a dilution factor of \nless than 10, which represents a common threshold for environmental concern'. \nSuch plants with a dilution factor (DF) less than 10 are highlighted in blue.")
+```
+
+I like how my plot looks but I do wish I knew more about the data -- the more you know about the data, the easier it is to come up with interesting insights and data visualizations. Still though, I am proud how much quicker this sf plot was than the previous ones. I can definitely see myself improving.
+
+```{r}
+praise::praise()
+```
+
