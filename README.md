@@ -2,6 +2,8 @@
 
 My personal (passion project) journal of Tidy Tuesday creations. See the folders in this repository for the source code etc. In this README.md are the links to my rpubs for my Tidy Tuesday creations to see my data visualizations in action! 
 
+* 09/27/2022 [Artists in the USA](https://rpubs.com/scolando/Tidy-Tuesday-09-27-2022)
+
 * 09/20/2022 [Wastewater Plants](https://rpubs.com/scolando/Tidy-Tuesday-09-20-2022)
 
 * 08/30/2022 [Pell Grants](https://rpubs.com/scolando/Tidy-Tuesday-08-30-2022)

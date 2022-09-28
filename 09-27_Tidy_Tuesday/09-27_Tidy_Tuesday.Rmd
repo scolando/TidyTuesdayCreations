@@ -1,0 +1,123 @@
+---
+title: "Tidy Tuesday 09-27-2022: Artists in the USA"
+output: html_document
+date: "09-27-2022"
+---
+
+## The Data
+
+This week' TidyTuesday data from [arts.gov](https://www.arts.gov/impact/research/arts-data-profile-series/adp-31/data-tables) via [Data is Plural](https://www.data-is-plural.com/archive/2022-09-21-edition/). This is a super interesting and usable(!) data set with info like the number of artists partitioned by state, race, and type. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(tidytext)
+library(MetBrewer)
+```
+
+```{r message= FALSE}
+artists <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-09-27/artists.csv')
+```
+
+## Data Wrangling
+
+I first began by filtering the data to the top 20 states (in terms of total number of artists) and also the top 5 artist types in these 20 states. This way, the data viz would look cleaner.
+
+```{r}
+state_n <- artists %>%
+  group_by(state) %>%
+  summarize(total = sum(artists_n, na.rm = TRUE)) %>%
+  slice_max(total, n = 20)
+```
+
+```{r warning=FALSE}
+top_types <- artists %>%
+  filter(state %in% state_n$state) %>%
+  group_by(type) %>%
+  summarize(total_type = sum(artists_n, na.rm = TRUE)) %>%
+  slice_max(total_type, n = 5)
+```
+
+```{r warning=FALSE}
+df <- artists %>%
+  select(state, race, type, artists_n) %>%
+  drop_na() %>%
+  filter(state %in% state_n$state) %>%
+  filter(type %in% top_types$type)
+```
+
+## Plots
+
+I created three plots which are different ways of plotting the same information. In plots 1 and 2, I log-transformed the number of artists in each race as there were many more white artists reported in each state and type than any other race. In plots 2 and 3, instead of stacking the bar plots of each race on top of each other (like in plot 1), I "filled" them (see geom_bar code), which makes the length of each bar constant, so we can better see the race-breakdown within each type. However, plots 2 and 3 then lose information about the number of artists in each type per state. Clearly, there are trade-offs in each representation of the data -- an important thing to keep in mind when visualizing/reporting data.
+
+```{r warning = FALSE}
+df %>%
+  ggplot()+
+  geom_bar(aes(x = reorder_within(type,artists_n, state), y = artists_n,  fill = race), position = "stack", stat = "identity")+
+    theme_bw()+
+  theme(axis.text.y = element_blank(),axis.text.x = element_text(size = 3), axis.ticks.y = element_blank(), legend.position = "top", legend.justification = "left", plot.background = element_rect(fill ="seashell2"), legend.background = element_rect(fill ="seashell2"), plot.title = element_text(face = "bold", size = 20, hjust = 0.5), plot.subtitle = element_text(face = "italic", size = 9, hjust = 0.5, color = "grey20"))+
+  scale_x_reordered()+
+  coord_flip()+
+  scale_y_continuous(trans='log10')+
+  facet_wrap(~state, scales = "free")+
+  ylab("Number or Artists")+
+  xlab("Type of Artist")+
+  scale_fill_manual(values = MetBrewer::met.brewer("Johnson"))+
+ #scale_fill_brewer(palette = "OrRd")+
+  guides(fill = guide_legend(title.position = "top", title = "Race"))+
+  labs(subtitle = "The Proportion of Each Race for the 5 Most Popular Artist Types (top to bottom): \nDesigners, Writers and Authors, Fine Artists, Art Directors and Animators,\nProducers and Directors, Photographers in 20 states with the most aritsts.", title = "Looking at Artist Types and Race in 20 States", caption = "TidyTuesday 09/27/2022 | Github: @scolando")
+```
+
+```{r warning=FALSE}
+ggsave("artists_1.png",plot = last_plot(), width = 10, height = 7, dpi = 500)
+```
+
+```{r warning= FALSE}
+df %>%
+  ggplot()+
+  geom_bar(aes(x = reorder_within(type,artists_n, state), y = artists_n,  fill = race), position = "fill", stat = "identity")+
+    theme_bw()+
+  theme(axis.text.y = element_blank(),axis.text.x = element_text(size = 3), axis.ticks.y = element_blank(), legend.position = "top", legend.justification = "left", plot.background = element_rect(fill ="seashell2"), legend.background = element_rect(fill ="seashell2"), plot.title = element_text(face = "bold", size = 20, hjust = 0.5), plot.subtitle = element_text(face = "italic", size = 9, hjust = 0.5, color = "grey20"))+
+  scale_x_reordered()+
+  coord_flip()+
+  scale_y_continuous(trans='log10')+
+  facet_wrap(~state, scales = "free")+
+  ylab("Number or Artists")+
+  xlab("Type of Artist")+
+  scale_fill_manual(values = MetBrewer::met.brewer("Johnson"))+
+ #scale_fill_brewer(palette = "OrRd")+
+  guides(fill = guide_legend(title.position = "top", title = "Race"))+
+  labs(subtitle = "The Proportion of Each Race for the 5 Most Popular Artist Types (top to bottom): \nDesigners, Writers and Authors, Fine Artists, Art Directors and Animators,\nProducers and Directors, Photographers in 20 states with the most aritsts.", title = "Looking at Artist Types and Race in 20 States", caption = "TidyTuesday 09/27/2022 | Github: @scolando")
+```
+
+```{r warning=FALSE}
+ggsave("artists_2.png",plot = last_plot(), width = 10, height = 7, dpi = 500)
+```
+
+```{r warning= FALSE}
+df %>%
+  ggplot()+
+  geom_bar(aes(x = reorder_within(type,artists_n, state), y = artists_n,  fill = race), position = "fill", stat = "identity")+
+    theme_bw()+
+  theme(axis.text.y = element_blank(),axis.text.x = element_text(size = 3), axis.ticks.y = element_blank(), legend.position = "top", legend.justification = "left", plot.background = element_rect(fill ="seashell2"), legend.background = element_rect(fill ="seashell2"), plot.title = element_text(face = "bold", size = 20, hjust = 0.5), plot.subtitle = element_text(face = "italic", size = 9, hjust = 0.5, color = "grey20"))+
+  scale_x_reordered()+
+  coord_flip()+
+  facet_wrap(~state, scales = "free")+
+  ylab("Number or Artists")+
+  xlab("Type of Artist")+
+  scale_fill_manual(values = MetBrewer::met.brewer("Johnson"))+
+ #scale_fill_brewer(palette = "OrRd")+
+  guides(fill = guide_legend(title.position = "top", title = "Race"))+
+  labs(subtitle = "The Proportion of Each Race for the 5 Most Popular Artist Types (top to bottom): \nDesigners, Writers and Authors, Fine Artists, Art Directors and Animators,\nProducers and Directors, Photographers in 20 states with the most aritsts.", title = "Looking at Artist Types and Race in 20 States", caption = "TidyTuesday 09/27/2022 | Github: @scolando")
+```
+
+```{r warning=FALSE}
+ggsave("artists_3.png",plot = last_plot(), width = 10, height = 7, dpi = 500)
+```
+
+*also HUGE shoutout to MetBrewer R package for the pretty fill color palette -- felt very apt given this week's TidyTuesday data theme.*
+
+```{r}
+praise::praise()
+```
+
