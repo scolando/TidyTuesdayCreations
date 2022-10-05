@@ -1,0 +1,76 @@
+---
+title: "Tidy Tuesday 10-04-2022: Product Hunt"
+output: html_document
+date: "2022-10-04"
+---
+
+## The Data
+
+This week's data comes from [components.one](https://components.one/posts/gamer-and-nihilist-product-hunt) via [Data is Plural](https://www.data-is-plural.com/archive/2022-09-28-edition/#:~:text=t%20Factle%5D-,Tech%20products%20promoted.,-For%20%E2%80%9CThe). The detail is about **Product Hunt** -- popular social media platform for sharing new tech products.
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lubridate)
+library(ggtext)
+library(ggrepel)
+```
+
+```{r warning=FALSE, message=FALSE}
+product_hunt <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-10-04/product_hunt.csv')
+```
+
+## Wrangling
+
+```{r}
+# this chunk creates a year variable and unnests the category tags for each object, leading to a much longer df where each product name has multiple entries in the data frame.
+df_categ <- product_hunt %>%
+  mutate(year = year(release_date)) %>%
+  select(name, upvotes, year, category_tags) %>%
+  drop_na() %>%
+  tidytext::unnest_tokens(word, category_tags) 
+```
+
+```{r}
+# to generate top categories (based off number of occurences)
+df_top_categ <- df_categ %>%
+  group_by(word) %>%
+  count() %>%
+  group_by(n) %>%
+  arrange(desc(n))
+```
+
+```{r}
+# filtered only to observations within top 9 categories 
+df_final <- df_categ %>%
+  filter(word %in% df_top_categ$word[1:9]) %>%
+  rename(category = word)
+```
+
+
+```{r}
+#df for labels in order to only label products with the first and second most upvotes within the category tag
+top_prod <- df_final %>%
+  group_by(category) %>%
+  arrange(desc(upvotes)) %>%
+  slice_head(n = 2)
+```
+
+## The Plot
+
+```{r}
+df_final %>%
+  ggplot()+
+  geom_point(aes(x = upvotes, y = year, color = category), shape = "|", size = 4)+
+  geom_label_repel(data = top_prod, aes(x = upvotes, y = year, label = name), label.size = .1, nudge_y = -.75, nudge_x = 5000, size = 2, fill = "grey15", color = "white")+
+    scale_y_continuous(limits = c(2014,2021),n.breaks = 7)+
+  facet_wrap(~category)+
+  theme(legend.position = "none", strip.background = element_rect(fill = "#CC5500"), strip.text = element_text(color = "white"), plot.background = element_rect(fill = "white"), plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5, size = 9, face = "italic"))+
+  labs(title = "Number of Upvotes in Different Years and Category Tags on Product Hunt", subtitle = "The Nine Categories in this Plot are Those with Most Products", caption = "Tidy Tuesday 10-04-2022 | Github: @scolando")
+```
+
+```{r echo=FALSE}
+ggsave(filename = "product_hunt.png", width = 12, height = 7, dpi = 500)
+```
+
