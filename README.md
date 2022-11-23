@@ -2,6 +2,8 @@
 
 My personal (passion project) journal of Tidy Tuesday creations. See the folders in this repository for the source code etc. In this README.md are the links to my rpubs for my Tidy Tuesday creations to see my data visualizations in action! 
 
+* 11/22/2022 [UK Museums]((https://scolando.github.io/TidyTuesdayCreations/11-22_Tidy_Tuesday/11-22_Tidy_Tuesday.html) 
+
 * 10/04/2022 [Product Hunt](https://rpubs.com/scolando/Tidy-Tuesday-10-04-2022)
 
 * 09/27/2022 [Artists in the USA](https://rpubs.com/scolando/Tidy-Tuesday-09-27-2022)
