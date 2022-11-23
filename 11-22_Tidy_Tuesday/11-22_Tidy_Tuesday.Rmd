@@ -1,0 +1,85 @@
+---
+title: "Tidy Tuesday 11-22-2022: UK Museums"
+output: 
+  html_document:
+    self_contained: false
+date: "2022-11-22"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggiraph)
+library(cowplot)
+library(MetBrewer)
+```
+
+
+```{r message=FALSE, warning=FALSE}
+museums <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-11-22/museums.csv')
+```
+
+
+```{r}
+df <- museums %>%
+  filter(Year_closed < 2022) %>%
+  select(Name_of_museum, Longitude, Latitude, contains("Deprivation_index_")) %>%
+  pivot_longer(-c(Name_of_museum, Longitude, Latitude), names_to = "Variable", values_to = "Values") %>%
+  filter(Values <= 2)
+```
+
+
+
+
+```{r echo=FALSE}
+#depriv_vars <- museums %>%
+#  select(contains("Deprivation_index_")) #%>%
+#  colnames()
+
+#for (vars in depriv_vars){
+#  vec <- (museums[[vars]] <= 3)
+#    indices <- which(vec)
+#    df <- museums %>%
+#    select(Name_of_museum, Longitude, Latitude, vars)
+#    df <- df[c(indices),] %>%
+#      pivot_longer(vars, names_to = #"Variable", values_to = "Value")
+#  assign(paste0("df_",vars), df)
+#}
+```
+
+```{r}
+museums_new <- museums %>% filter(Year_closed > 2022) 
+```
+
+```{r}
+df$Variable<- factor(df$Variable, levels = c("Area_Deprivation_index_crime",
+                     "Area_Deprivation_index_health", "Area_Deprivation_index_housing", "Area_Deprivation_index_services", "Area_Deprivation_index_income", "Area_Deprivation_index_education", "Area_Deprivation_index_employment"), labels = c("Crime", "Education", "Employement", "Health", "Housing", "Income", "Service"))
+```
+
+
+
+```{r warning=FALSE}
+gg_point <- df %>%
+ggplot()+
+  geom_point(data = museums_new, aes(x = Latitude, y = Longitude), size = 0.25, alpha = 0.70, color = "grey85")+
+    geom_point_interactive(aes(x = Latitude, y = Longitude, color = Variable, tooltip = Name_of_museum), size = 0.25, alpha = 1)+
+  facet_wrap(~Variable, ncol = 3)+
+  xlim(c(47,65))+
+  theme_cowplot(12)+
+  theme(axis.ticks = element_blank(), axis.text = element_blank(), axis.title = element_blank(), axis.line = element_blank(), legend.position = "none", plot.title = element_text(hjust = 0.5, size = 17), plot.subtitle = element_text(hjust = 0.5, face = "italic"), strip.background = element_rect(fill = "#898e9f"), strip.text = element_text(size = 10), plot.background = element_rect(fill = "seashell2"),
+        panel.background = element_rect(fill = "seashell2"))+
+  labs(title = 'How many UK Museums are in "Deprived" Regions?', subtitle = '"Deprived" Regions are defined as regions scoring a 2 or lower on the deprivation \nindex within each category below', caption = "Tidy Tuesday 11-22-2022 | Github: @scolando")+
+  scale_color_manual(values=met.brewer("Cross", 7))
+```
+
+
+```{r echo=FALSE}
+x <- girafe(ggobj = gg_point)
+x <- girafe_options(x,
+  opts_zoom(min = .7, max = 10))
+if( interactive() ) print(x)
+```
+
+```{r echo = FALSE}
+widgetframe::frameWidget(x)
+```
