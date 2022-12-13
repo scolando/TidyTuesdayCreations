@@ -1,0 +1,122 @@
+---
+title: "Tidy Tuesday 11-29-2022: FIFA World Cup"
+output: html_document
+date: "2022-12-12"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggrepel)
+```
+
+This is completely a procrastination project, but basically I saw on TikTok that the previous winner of the World Cup does worse in the consequent world cup. I wanted to see if this is true, and of course, make a interesting data visualization of it. 
+
+Like always, we start by importing the data.
+
+```{r message=FALSE, warning=FALSE}
+wcmatches <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-11-29/wcmatches.csv')
+worldcups <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-11-29/worldcups.csv')
+```
+
+Next up, we are going to join the data frames to have the winner category bound to the wcmatches observations. After that, I created a new logical variable to see if the last wc's winner was playing in the match. Finally, I did some more wrangling to remove year NAs (no wc happened) and compile all German (East versus West) teams into one group. 
+
+```{r}
+df <- worldcups %>%
+  select(winner, second, third, fourth, year) %>%
+  mutate(year = year + 4) %>%
+  rename(last_wc_winner = winner, 
+         last_wc_second = second,
+         last_wc_third = third,
+         last_wc_fourth = fourth) %>%
+  right_join(wcmatches, by = "year") %>%
+  select(year, everything()) %>%
+  drop_na(last_wc_winner) %>%
+  mutate(winner_status = if_else(last_wc_winner == home_team| last_wc_winner == away_team,TRUE,FALSE)) %>%
+  mutate(stage = if_else(grepl("Group",stage), "Group", stage)) %>%
+  mutate(last_wc_winner = if_else(last_wc_winner == "West Germany", "Germany", last_wc_winner)) %>%
+  mutate(home_team = if_else(home_team == "West Germany" | home_team == "East Germany", "Germany", home_team)) %>%
+  mutate(away_team = if_else(away_team == "West Germany" | away_team == "East Germany", "Germany", away_team))
+  
+# some war years etc. where no world cup took place
+# logical vector allows us to compare teams playing to previous wc winner
+```
+
+Next up, I filtered to 'TRUE' cases where winning team was playing. Then, I enumerated the stages so that we can extract when the the last 'TRUE' observation is for each previous wc winner.
+
+```{r}
+df1 <- df %>%
+  filter(winner_status == TRUE) %>%
+  mutate(stage_level = case_when(
+    stage == "Final" ~ 6,
+    stage == "Third place" ~ 5,
+    stage == "Semifinals" ~ 4,
+    stage == "Quarterfinals" ~ 3,
+    stage == "Round of 16" ~ 2,
+    TRUE ~ 1))
+
+df_2 <- df1 %>%
+  group_by(year, last_wc_winner) %>%
+  select(year, last_wc_winner, stage, stage_level, winning_team) %>%
+  top_n(1, stage_level) %>%
+  distinct() #to get rid of cases where there are multiple group games etc.
+```
+
+Finally, I made a new data frame to see when a team wins back-to-back world cups.
+
+```{r}
+df_2_winners <- df_2 %>%
+  filter(stage == "Final") %>%
+  filter(winning_team == last_wc_winner)
+```
+
+
+Now, for the fun part: visualizing! I decided to use geom_segment to visualize how well previous wc winner's do in the consequent world cup. I also included information about the back-to-back world cup winners. Honestly, the previous wc winners did better than I would have expected in the next world cup based on the news I was seeing on social media platforms. It would be super cool to see what this graph would look like for the women's world cup.
+
+```{r warning=FALSE, message=FALSE}
+pal <- c(
+  "Group" = "grey60",
+  "Round of 16" = "grey50", 
+  "Quarterfinals" = "grey40", 
+  "Semifinals" = "grey40",
+  "Third place" = "grey30",
+  "Final" = "#c32148")
+
+df_2 %>%
+  ggplot()+
+  geom_segment(aes(x = 0, xend = stage_level, y = year, yend = year, color = stage), linewidth = 1.25)+
+  geom_point(aes(y = year, x = stage_level, color = stage), size = 2.5)+
+  theme_minimal()+
+  theme(legend.position = "none", axis.title = element_blank(), 
+        legend.key.size = unit(0.5, 'cm'),
+        legend.key.height = unit(0.5, 'cm'),
+        legend.key.width = unit(0.5, 'cm'), 
+        legend.title = element_text(size=8), 
+        legend.text = element_text(size=6),
+        panel.grid = element_blank(),
+        axis.text.x = element_blank(),
+        plot.title = element_text(hjust = 0.5, face = "bold", size = 16),
+        plot.subtitle = element_text(hjust = 0.5, size = 8, face = "italic"),
+        plot.background = element_rect(fill = "#E4E4DC"))+
+  scale_y_continuous(breaks = df_2$year)+
+  scale_x_continuous(limits = c(0,8), expand = c(0,0))+
+  geom_text(aes(x = stage_level, y = year, 
+                label = paste0(last_wc_winner, " makes it to ",stage, " Game")), size = 2, nudge_y = 2, color = "black")+
+  scale_color_manual(values = pal)+
+  labs(title = "How do the Last World Cup's Winners do\n in the Next World Cup?", subtitle = "An analysis done on FIFA Men's World Cup Teams", caption = "Tidy Tuesday 11-29-2022 | Github: @scolando") +
+  geom_point(data = df_2_winners, aes(y = year, x = stage_level), color = "black", size = 1.5)+
+  geom_curve(x = 6.5, xend = 6.05, y = 1958, yend = 1960, color = "black",curvature=-0.2, size=0.4,
+             arrow = arrow(length = unit(0.07, "inch")))+
+  annotate(geom="text", color="black", x=6.85, y=1958, label="Won Again", size=2.5)
+```
+
+```{r}
+praise::praise()
+```
+
+
+```{r echo=FALSE, eval=FALSE}
+ggsave("WorldCup.png", height=5, width=7)
+```
+
+
