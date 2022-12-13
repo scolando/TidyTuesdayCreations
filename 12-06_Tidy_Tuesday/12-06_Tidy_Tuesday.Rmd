@@ -1,0 +1,97 @@
+---
+title: "12-06 Tidy_Tuesday: Elevators"
+output: html_document
+date: "2022-12-06"
+---
+
+This week's data is about Elevators in New York City.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(MetBrewer)
+library(gganimate)
+```
+
+Importing the data:
+
+```{r}
+elevators <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-12-06/elevators.csv')
+```
+
+The data itself was not cleaned. So, I decided to only focus on the observations where the floor variables were numeric. Then, I found the floors climbed by taking the absolute value of the difference between the starting location and the ending location.
+
+```{r}
+df <- elevators %>% 
+  select(LONGITUDE, LATITUDE, Borough, contains("FLOOR"), DV_STATUS_DATE) %>%
+  drop_na() %>%
+  mutate(year = substr(DV_STATUS_DATE, 1, 4)) %>%
+  filter(DV_FLOOR_FROM %in% 1:100) %>%
+  mutate(DV_FLOOR_FROM = as.numeric(DV_FLOOR_FROM)) %>%
+  filter(DV_FLOOR_TO %in% 1:100) %>%
+  mutate(DV_FLOOR_TO = as.numeric(DV_FLOOR_TO)) %>%
+  mutate(floors_climbed = abs(DV_FLOOR_TO - DV_FLOOR_FROM)) %>%
+  filter(floors_climbed > 0)
+```
+
+Next, I made floors climbed into a factor variable in the desired order. If I had more time, I would have cleaned up the level bounds to be whole numbers, but alas, with finals, that was not feasible.
+
+```{r}
+df$floors <- cut(df$floors_climbed, breaks = 8)
+```
+
+```{r}
+df$floors <- factor(df$floors, level = c("(78,89.1]","(67,78]","(56,67]","(45,56]","(34,45]","(23,34]","(12,23]","(0.912,12]"))
+```
+
+
+Finally, I grouped my data frame by Borough so I could see the number of observations in each level of the factor.
+
+```{r}
+df_2 <- df %>%
+  group_by(Borough) %>%
+  count(floors)
+```
+
+
+Here is the static plot I did.
+
+```{r}
+df_2  %>%
+  ggplot()+
+  geom_bar(aes(x = Borough, y = n, fill = floors), stat = "Identity", position = position_dodge(preserve = "single"))+
+    theme_dark()+
+  theme(axis.text = element_text(color = "black"),
+        panel.grid = element_blank(), plot.background = element_rect(fill = "grey50"), legend.background = element_rect(fill = "grey50"))+
+   scale_fill_manual(values=met.brewer("Demuth", 8, direction = -1))+
+  ylab("Count")+
+  guides(fill=guide_legend(title="Floors Climbed"))
+```
+
+But, I wanted the data visualization to resemble an elevator. So, I made it a bar plot for each Borough and animated the bars to that the rose up to their final location, just like an elevator would. 
+
+```{r}
+new_plot <- df_2  %>%
+  ggplot()+
+  geom_bar(aes(x = floors, y = n, fill = floors), stat = "Identity", position = position_dodge(preserve = "single"))+
+  facet_wrap(~Borough, scale = "free_y")+
+    theme_dark()+
+  theme(axis.text = element_text(color = "black"),
+        panel.grid = element_blank(), plot.background = element_rect(fill = "grey50"), legend.background = element_rect(fill = "grey50"), axis.text.x = element_blank(), plot.title = element_text(size = 14, color = "lightgoldenrodyellow", hjust = 0.5, face = "bold"))+
+   scale_fill_manual(values=met.brewer("Demuth", 8, direction = -1))+
+  ylab("Count")+
+  guides(fill=guide_legend(title="Floors Climbed"))+
+  labs(title = "Floors Climbed by Elevators\n in NY Boroughs", caption = "Tidy Tuesday 12-06| Github: @scolando")
+```
+
+animating part and saving the resulting gif:
+
+```{r}
+new_plot_animated <- new_plot + transition_states(floors, transition_length = 3, state_length = 7)+ enter_grow()+ shadow_mark()
+
+animate(new_plot_animated, height = 7, width = 7, units = "in", res = 150)
+
+anim_save("elevator.gif", animation = last_animation())
+```
+
+
