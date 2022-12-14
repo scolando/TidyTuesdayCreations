@@ -1,0 +1,86 @@
+---
+title: "Tidy Tuesday 10-25-2022: Great British Bakeoff"
+output: html_document
+date: "2022-10-25"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(tidytext)
+library(treemapify)
+```
+
+```{r message=FALSE, warning=FALSE}
+bakers <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-10-25/bakers.csv')
+
+challenges <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-10-25/challenges.csv')
+ratings <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-10-25/ratings.csv')
+
+episodes <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-10-25/episodes.csv')
+```
+
+```{r}
+df <- left_join(bakers, challenges, by = c("series", "baker")) %>%
+  drop_na(result) %>%
+  select(-first_date_us, -last_date_us,-baker_first,-baker_last)
+```
+
+```{r}
+ch_1 <- challenges %>%
+  filter(result == "OUT") %>%
+  unnest_tokens(word, signature) %>%
+  select(-showstopper) %>%
+  rename(sig_word = word)
+
+ch_2 <- challenges %>%
+  filter(result == "OUT") %>%
+  unnest_tokens(word, showstopper) %>%
+  select(-signature) %>%
+  rename(showstopper_word = word)
+
+df <- left_join(ch_1, ch_2, by = c("series", "episode","baker")) %>%
+  filter(!(sig_word %in% stop_words$word)) %>%
+  filter(!(showstopper_word %in% stop_words$word))
+```
+
+```{r}
+word_count_1 <- df %>%
+  count(sig_word) %>%
+  arrange(desc(n)) %>%
+  rename(word = sig_word) %>%
+  mutate(dish_type = "Signature")
+```
+```{r}
+word_count_2 <- df %>%
+  count(showstopper_word) %>%
+  arrange(desc(n)) %>%
+  rename(word = showstopper_word) %>%
+  mutate(dish_type = "Showstopper")
+```
+
+```{r}
+words <- rbind(word_count_1, word_count_2)
+```
+
+```{r}
+final_df <- words %>%
+  group_by(dish_type) %>%
+  slice_max(n = 15, order_by = n)
+```
+
+```{r}
+final_df %>%
+  ggplot(aes(area = n, label = word))+
+  geom_treemap(aes(fill = word))+
+  geom_treemap_text(color = "gray97", min.size = 0, fontface = "bold", place = "center")+
+  facet_wrap(~dish_type)+
+  theme(legend.position = "none", strip.background = element_rect(fill = "peachpuff3"), plot.background = element_rect(fill = "antiquewhite2"), plot.title = element_text(hjust = 0.5, color = "black", face = "bold.italic", size = 15), strip.text = element_text(face = "bold", size = 15))+
+  ggtitle("Which Words are Most Common in Eliminated Dishes on \nThe Great British Bake-off?\n")+
+  labs(caption = "Tidy Tuesday 10-25-2022 | Github: @scolando")
+```
+
+```{r echo = FALSE, eval=FALSE}
+ggsave(filename = "baking.png", width = 12, height = 6, dpi = 400)
+```
+

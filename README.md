@@ -6,6 +6,8 @@ My personal (passion project) journal of Tidy Tuesday creations. See the folders
 
 * 11/29/2022 [FIFA World Cup](https://rpubs.com/scolando/Tidy-Tuesday-11-29-2022)
 
+* 10/25/2022 [Great British Bake-off](https://rpubs.com/scolando/Tidy-Tuesday-10-25-2022)
+
 * 10/04/2022 [Product Hunt](https://rpubs.com/scolando/Tidy-Tuesday-10-04-2022)
 
 * 09/27/2022 [Artists in the USA](https://rpubs.com/scolando/Tidy-Tuesday-09-27-2022)
