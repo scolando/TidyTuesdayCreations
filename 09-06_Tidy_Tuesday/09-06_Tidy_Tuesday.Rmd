@@ -1,0 +1,86 @@
+---
+title: 'Tidy Tuesday 09/06/2022: Legos'
+output: html_document
+date: "2022-09-06"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(gender)
+library(tidytext)
+library(legocolors)
+```
+
+```{r}
+inventories <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-09-06/inventories.csv.gz')
+inventory_sets <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-09-06/inventory_sets.csv.gz')
+sets <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-09-06/sets.csv.gz')
+minifigs <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-09-06/minifigs.csv.gz')
+inventory_minifigs <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-09-06/inventory_minifigs.csv.gz')
+
+```
+```{r}
+df <- minifigs %>%
+  left_join(inventory_minifigs, by = "fig_num") %>%
+  left_join(inventories, by = c("inventory_id" = "id")) %>%
+  left_join(sets, by = "set_num") %>%
+  rename(minifig_parts = num_parts.x, minifig_name = name.x, minifig_img_url = img_url.x)
+```
+
+```{r}
+df_new <-df %>%
+  select(-contains("url"), -contains("id"), -contains("_num")) %>%
+  rename(set_name = name.y, set_parts = num_parts.y)
+```
+
+```{r}
+df2 <- df_new %>%
+  unnest_tokens(output = minfig_words, input = minifig_name)
+```
+
+```{r}
+df[[2]] <- tolower(df[[2]])
+```
+
+```{r}
+gender_df <- df %>%
+  group_by(minifig_name) %>%
+  mutate(gender = case_when(
+    str_detect(minifig_name, "woman|girl|female|queen|ponytail|emma|olivia|andrea|mia|stephanie|ms.|mrs.|mother|goddess|daughter|lady") ~ "female",
+    str_detect(minifig_name, "man|boy|sir|male|guy|king|beard|stubble|knight|lord|luke|harry|hagrid|darth|mr.|father|god|son|soldier|moustache|santa|lloyd|droid|jones|steve|john|alex|owen|trooper") ~ "male",
+    TRUE ~ "unknown")) %>%
+  filter(gender != "unknown")
+```
+
+```{r}
+df_final <- gender_df %>%
+  group_by(gender, year) %>%
+  drop_na(num_parts.y) %>%
+  mutate(observations = n()) %>%
+  mutate(avg_lego_pieces = mean(num_parts.y)) %>%
+  select(avg_lego_pieces, gender, year, observations) %>%
+  arrange(year) 
+```
+
+```{r message = FALSE}
+df_final %>%
+  ggplot(aes(x = year, y = avg_lego_pieces))+
+  geom_point(aes(size = observations, color = gender), shape = 15, alpha = .5)+
+  scale_color_manual(values = c("steelblue2","#E18D0A"))+
+  geom_smooth(method = "lm", se = FALSE,  aes(color = gender))+
+  theme_bw()+
+     labs(title = "How are Minifigure Gender and Number of Pieces Related?", subtitle = "The Relationship between Minifigure Gender and the Number of Pieces over Time \n", caption = "Tidy Tuesday 09-06-2022 | Github: @scolando")+
+  theme(panel.background = element_rect(fill = "ivory"), legend.position = "right", legend.justification = "left", plot.background = element_rect(fill = "aliceblue"), plot.title = element_text(face = "bold", color = "orangered4", hjust = 0.5, size = 15), legend.background = element_rect(fill = "aliceblue"), legend.key = element_rect(fill = "aliceblue"), plot.subtitle = element_text(face = "bold.italic", color = "orangered3", hjust = 0.5, size = 10))+
+  ylab("Average Pieces per Set")+
+  xlab("Year")+
+  scale_x_continuous(limits = c(1975, 2022), breaks = seq(1975, 2022, by = 4))+
+  scale_y_continuous(limits = c(45, 1030), breaks = seq(45, 1030, by = 100))+
+  guides(color = guide_legend(title.position = "top"), size = guide_legend(title.position = "top"))
+```
+
+```{r echo = FALSE, message=FALSE}
+ggsave("legos.png", dpi = 400)
+```
+
+

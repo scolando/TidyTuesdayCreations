@@ -14,6 +14,8 @@ My personal (passion project) journal of Tidy Tuesday creations. See the folders
 
 * 09/20/2022 [Wastewater Plants](https://rpubs.com/scolando/Tidy-Tuesday-09-20-2022)
 
+* 09/06/2022 [Legos](https://rpubs.com/scolando/Tidy-Tuesday-09-06-2022)
+
 * 08/30/2022 [Pell Grants](https://rpubs.com/scolando/Tidy-Tuesday-08-30-2022)
 
 * 08/09/2022 [Ferris Wheels](https://rpubs.com/scolando/Tidy-Tuesday-08-09-2022)
