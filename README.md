@@ -2,6 +2,10 @@
 
 My personal (passion project) journal of Tidy Tuesday creations. See the folders in this repository for the source code etc. In this README.md are the links to my rpubs for my Tidy Tuesday creations to see my data visualizations in action! 
 
+* 12/20/2022 [Weather Forecast Accuracy](https://rpubs.com/scolando/Tidy-Tuesday-12-20-2022)
+
+* 12/13/2022 [Monthly Retail Sales](https://rpubs.com/scolando/Tidy-Tuesday-12-13-2022)
+
 * 12/06/2022 [Elevators](https://rpubs.com/scolando/Tidy-Tuesday-12-06-2022)
 
 * 11/29/2022 [FIFA World Cup](https://rpubs.com/scolando/Tidy-Tuesday-11-29-2022)

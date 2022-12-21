@@ -1,0 +1,134 @@
+---
+title: "12-13-2022 Tidy Tuesday: Monthly State Retail Sales"
+output: 
+  html_document:
+    self_contained: false
+date: "2022-12-16"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(leaflet)
+library(usdata)
+library(sf)
+library(spData)
+library(htmltools)
+library(htmlwidgets)
+```
+
+```{r}
+state_retail <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-12-13/state_retail.csv',  col_types = "cciciiccc")
+coverage_codes <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-12-13/coverage_codes.csv')
+```
+```{r}
+df <- state_retail |>
+  left_join(coverage_codes, by = "coverage_code") %>%
+  filter(state_abbr != "USA") |>
+  filter(coverage_code != "S") |>
+  filter(year == 2020) |>
+  filter(subsector == "Furniture and Home Furnishing") |>
+  group_by(state_abbr) |>
+  drop_na(change_yoy, change_yoy_se) |>
+  mutate(change_yoy = as.numeric(change_yoy)) |>
+  mutate(change_yoy_se = as.numeric(change_yoy_se)) |>
+  summarize(mean_change = mean(change_yoy), mean_se = mean(change_yoy_se))
+```
+
+```{r}
+us_states <- us_states |> 
+  mutate(state_abbr = state2abbr(NAME))
+```
+
+```{r}
+state_df <- df |>
+  right_join(us_states, by = "state_abbr") |>
+  filter(state_abbr != "AK") |>
+  mutate(lower_bound = round(mean_change - mean_se, 2)) |>
+  mutate(upper_bound = round(mean_change + mean_se,2)) |>
+  mutate(range = paste0("[",lower_bound,",",upper_bound,"]")) |>
+  st_as_sf()
+```
+
+```{r}
+pal <- colorBin("RdYlBu", domain = state_df$mean_change)
+```
+
+
+```{r}
+labels <- sprintf(
+  "<strong>%s</strong><br/> %s mean percent change<br/>",
+  state_df$NAME, state_df$range
+) %>% lapply(htmltools::HTML)
+```
+
+```{r}
+tag.map.title <- tags$style(HTML("
+  .leaflet-control.map-title { 
+    transform: translate(-50%,20%);
+    position: fixed !important;
+    left: 50%;
+    text-align: center;
+    padding-left: 10px; 
+    padding-right: 10px; 
+    background: rgba(255,255,255,0.75);
+    font-weight: bold;
+    font-size: 20px;
+  }"))
+
+title <- tags$div(
+  tag.map.title, HTML("Average Change in Furniture and Home Furnishing Spending in US  \n from 2019 and 2020"))
+```
+
+
+```{r message=FALSE, warning=FALSE}
+widget <- leaflet(state_df) |>
+  setView(-97, 42, 3.4) |>
+    addProviderTiles("MapBox",
+                     options = providerTileOptions(
+    id = "mapbox.light")) |>
+  addPolygons(
+  fillColor = ~pal(mean_change),
+  color = "white",
+  weight = 1,
+  dashArray = "",
+  fillOpacity = 1,
+  highlightOptions = highlightOptions(
+    weight = 3,
+    color = "black",
+    dashArray = "",
+    fillOpacity = 1,
+    bringToFront = TRUE),
+  label = labels,
+  labelOptions = labelOptions(
+       textsize = "14px")) |>
+  addControl(title, position = "topleft", className="map-title") |>
+   addLegend("bottomright", pal = pal, values = ~mean_change,
+    title = "Mean Year-over-Year Change",
+    labFormat = labelFormat(suffix = "%"),
+    opacity = .8
+  )
+```
+
+```{r}
+saveWidget(widget, "homereno.html", selfcontained = T, libdir = "lib")
+```
+
+
+```{r eval = FALSE, echo = FALSE}
+htmltools::tags$iframe(
+  src = "homereno.html", 
+  scrolling = "no", 
+  seamless = "seamless",
+  frameBorder = "0",
+  width = 700,
+  height = 500,
+  
+)
+```
+
+<!--html_preserve-->
+<iframe src = "homereno.html", width = "700", height = "500" </iframe>
+<!--/html_preserve-->
+
+
