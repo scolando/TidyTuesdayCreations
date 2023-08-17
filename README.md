@@ -2,6 +2,8 @@
 
 My personal journal of Tidy Tuesday creations. See the folders in this repository for the source code etc. In this README.md are the links to my rpubs for my Tidy Tuesday creations to see my data visualizations in action! 
 
+* 03/21/2023 [Coding Languages](https://rpubs.com/scolando/Tidy-Tuesday-03-21-2023)
+
 * 12/20/2022 [Weather Forecast Accuracy](https://rpubs.com/scolando/Tidy-Tuesday-12-20-2022)
 
 * 12/13/2022 [Monthly Retail Sales](https://rpubs.com/scolando/Tidy-Tuesday-12-13-2022)
