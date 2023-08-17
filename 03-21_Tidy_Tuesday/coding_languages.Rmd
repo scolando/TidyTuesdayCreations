@@ -1,0 +1,67 @@
+---
+title: "TidyTuesday 03-21-2023: Coding Languages"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, fig.align = "center")
+library(tidyverse)
+library(ggtext)
+library(ggExtra)
+```
+
+```{r}
+languages <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-03-21/languages.csv')
+```
+```{r}
+df <- languages %>%
+  select(title, type, appeared, creators, isbndb, book_count, semantic_scholar, language_rank, wikipedia_daily_page_views, wikipedia_backlinks_count, wikipedia_summary, number_of_users, number_of_jobs, origin_community, is_open_source)
+```
+
+```{r}
+counts <- df %>%
+  filter(appeared > 1989) %>%
+  filter(appeared != 2023) %>%
+  group_by(appeared) %>%
+  count()
+```
+
+
+```{r}
+top_programming <- df %>% 
+  filter(appeared > 1989) %>%
+  filter(appeared != 2023) %>%
+  filter(language_rank < 20) %>%
+  left_join(counts, by = "appeared") %>%
+  select(title, language_rank, appeared) %>%
+  arrange(language_rank)
+```
+
+
+```{r}
+top_programming <- top_programming %>% 
+  left_join(counts, by = "appeared")
+```
+
+
+```{r out.width="120%", out.height="100%"}
+colors <- c("Top 20 Programming Language First Appeared" = "red")
+
+counts %>%
+  rename(count = n) %>% 
+  ggplot()+
+  geom_line(aes(x = appeared, y = count))+
+    geom_point(data = top_programming, aes(x = appeared, y = n, color = "Top 20 Programming Language First Appeared"), size = 5.5)+
+  geom_point(aes(x = appeared, y = count), size = 4.5)+
+  geom_text(aes(x = appeared, y = count, label = count), size = 2, color = "white", fontface = "bold")+
+  theme_minimal()+
+  labs(color = "")+
+    labs(title = "Programming Languages' Rise", subtitle = "When Programming Languages First Appeared (1990-2022)", caption = "Tidy Tuesday 03/21 | Github: @scolando")+
+  guides(color = guide_legend(title.position = "top"))+
+  ylab("Count")+
+  xlab("")+
+   theme(legend.position = "top", legend.justification = "left", plot.subtitle = element_text(size = 12, face = "bold", color = "grey20"), plot.title = element_text(size = 20, face = "bold"))
+  
+```
+
+

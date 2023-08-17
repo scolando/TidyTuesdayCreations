@@ -1,0 +1,11 @@
+name: Publish Document
+title:
+username:
+account: rpubs
+server: rpubs.com
+hostUrl: rpubs.com
+appId: https://api.rpubs.com/api/v1/document/1072454/208c80b8925f49d2b5fadc7eeac567be
+bundleId: https://api.rpubs.com/api/v1/document/1072454/208c80b8925f49d2b5fadc7eeac567be
+url: http://rpubs.com/scolando/1072454/edit
+when: 1692292747.24158
+lastSyncTime: 1692292747.24158
