@@ -1,0 +1,88 @@
+---
+title: "Grants!"
+author: "Sara Colando"
+date: "2023-10-03"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(tidytext)
+library(scales)
+library(showtext)
+library(paRkpal)
+library(ggiraph)
+```
+
+```{r}
+font_add_google(name = "Roboto Mono", family = "Roboto Mono")
+font <- "Roboto Mono"
+
+showtext_auto()
+showtext_opts(dpi = 320)
+
+options(scipen = 999) 
+```
+
+
+```{r}
+grants <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-10-03/grants.csv')
+grant_opportunity_details <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-10-03/grant_opportunity_details.csv')
+```
+```{r}
+df_1 <- grants |>
+   unnest_tokens(word, opportunity_title) |>
+  filter(grepl("*ethic*|data|dataset|database|*statistic*",word, ignore.case = TRUE)) |>
+  rename(grant_word = word)
+
+```
+
+```{r}
+df_2 <- grants |>
+   unnest_tokens(word, agency_name) |>
+  rename(agency_word = word) |>
+  filter(agency_word %in% c("data", "statistics", "statistical"))
+  
+```
+
+```{r}
+final_df <- df_1 %>%
+  full_join(df_2, by = "opportunity_id") |>
+  drop_na(posted_date.x) |>
+  mutate(posted_year = year(posted_date.x)) |>
+  select(opportunity_id, grant_word, posted_year) |>
+  group_by(opportunity_id) |>
+  slice_head(n = 1) |>
+  ungroup() |>
+  mutate(word_type = case_when(
+    str_detect(grant_word, "data") ~ "Data",
+    str_detect(grant_word, "ethic") ~ "Ethics",
+    TRUE ~ "Statistics")) |>
+  group_by(posted_year, word_type) |>
+  count()
+  
+final_df$word_type <- factor(final_df$word_type, levels = c("Data", "Statistics", "Ethics"))
+final_df$index <- 1:nrow(final_df)
+
+```
+
+```{r out.width='70%', fig.align = "center"}
+gg <- final_df |>
+  ggplot(aes(x = posted_year, y = n))+
+  geom_line(size = .7, aes(color = word_type))+
+  geom_point_interactive(size = 1, aes(color = word_type, fill = word_type, tooltip = n, data_id = index))+
+  scale_x_continuous(breaks = seq(2005,2023,1))+
+  scale_y_continuous(breaks = seq(0,200,10))+
+  scale_color_manual(values = park_palette("voyageurs"))+
+  labs(x = "Posted Year", y = "Number of Posted Grants")+
+  guides(color = guide_legend(title = "Keyword Included\nin Grant Title:"), fill = FALSE)+
+  theme_minimal()+
+  theme(text = element_text(size = 7, family = font, color = "#000000"),
+    plot.background = element_rect(fill = "#FFFFFF"))
+
+girafe(ggobj = gg,
+        options = list(opts_tooltip(use_fill = TRUE, opacity = 1)))
+```
+
+
