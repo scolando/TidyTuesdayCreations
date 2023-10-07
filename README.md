@@ -1,4 +1,4 @@
-My personal journal of Tidy Tuesday creations. Below are links to see my Tidy Tuesday creations (mainly data visualizations) in actionm My [github repository](https://github.com/scolando/TidyTuesdayCreations) contains source code etc.
+My personal journal of Tidy Tuesday creations. Below are links to see my Tidy Tuesday creations (mainly data visualizations) in action. My [github repository](https://github.com/scolando/TidyTuesdayCreations) contains source code etc.
 
 * 10/04/2023 [US Grants](https://scolando.github.io/TidyTuesdayCreations/grants.html)
 
