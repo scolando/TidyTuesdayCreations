@@ -1,4 +1,4 @@
-My personal journal of Tidy Tuesday creations. See the folders in this repository for the source code etc. In this README.md are the links to my rpubs for my Tidy Tuesday creations to see my data visualizations in action! 
+My personal journal of Tidy Tuesday creations. See the folders in this repository for the source code etc. In this README.md are the links to see my Tidy Tuesday creations (mainly data visualizations in action! Link to my github repository, with the source code: [https://github.com/scolando/TidyTuesdayCreations](https://github.com/scolando/TidyTuesdayCreations) 
 
 * 10/04/2023 [US Grants](https://scolando.github.io/TidyTuesdayCreations/grants.html)
 
