@@ -2,6 +2,8 @@
 
 My personal journal of Tidy Tuesday creations. See the folders in this repository for the source code etc. In this README.md are the links to my rpubs for my Tidy Tuesday creations to see my data visualizations in action! 
 
+* 10/24/2023 [Taylor Swift](https://scolando.github.io/TidyTuesdayCreations/TaylorSwift.html)
+
 * 10/04/2023 [US Grants](https://scolando.github.io/TidyTuesdayCreations/grants.html)
 
 * 03/21/2023 [Coding Languages](https://rpubs.com/scolando/Tidy-Tuesday-03-21-2023)

@@ -1,0 +1,131 @@
+---
+title: "TidyTuesday: Taylor Swift Songs"
+author: "Sara Colando"
+date: "2023-10-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggiraph)
+library(tayloRswift)
+library(sysfonts)
+library(ggtext) 
+library(showtext)
+```
+
+```{r context = "setup"}
+sysfonts::font_add("TaylorSwift", "Satisfaction.ttf")
+font <- "TaylorSwift"
+
+showtext::showtext_auto()
+
+font_add_google(name = "Roboto Mono", family = "Roboto Mono")
+font2 <- "Roboto Mono"
+
+showtext_auto()
+showtext_opts(dpi = 320)
+
+options(scipen = 999) 
+```
+
+
+```{r}
+taylor_album_songs <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-10-17/taylor_album_songs.csv')
+taylor_all_songs <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-10-17/taylor_all_songs.csv')
+taylor_albums <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-10-17/taylor_albums.csv')
+```
+
+```{r}
+df <- taylor_all_songs |>
+  filter(album_name %in% c("Red", "Fearless")) |>
+  pivot_longer(danceability:tempo, names_to = "metric", values_to = "value_old") |>
+  select(track_name, metric, value_old) |>
+  filter(!(grepl("\\(", track_name)))
+```
+
+
+```{r}
+taylors_version <- taylor_album_songs |>
+  filter(grepl("Taylor's", album_name)) |>
+  mutate(track_name = str_replace(track_name, " \\(Taylor's Version\\)", "")) |>
+  pivot_longer(danceability:tempo, names_to = "metric", values_to = "value_ts") |>
+  select(track_name, metric, value_ts) |>
+  filter(track_name %in% df$track_name) |>
+  left_join(df, by = c("track_name", "metric")) |>
+  mutate(diff_metric = value_ts - value_old) 
+```
+
+
+```{r}
+df_final <- taylors_version |>
+  group_by(metric) |>
+  arrange(desc(abs(diff_metric))) |>
+  slice_head(n = 10) |>
+  left_join(taylor_all_songs, by = "track_name") |>
+  select(album_name, track_name, metric, value_old, value_ts, diff_metric)
+
+```
+
+
+```{r}
+
+red <- c("#b1532a")
+fearless <- c("#dbc498")
+```
+
+
+```{r}
+red <- df_final |>
+  filter(album_name == "Red") |>
+  group_by(track_name) |>
+  count() |>
+  cbind(color = rep(red, 19))
+
+fearless <- df_final |>
+  filter(album_name == "Fearless") |>
+  group_by(track_name) |>
+  count() |>
+  cbind(color = rep(fearless, 17))
+
+color_df <- rbind(red, fearless)
+
+df_final <- df_final |>
+  left_join(color_df, by = "track_name") |>
+  mutate(track_name = if_else(track_name == "SuperStar", "Superstar", track_name))
+  
+```
+
+
+```{r}
+
+gg <- df_final |>
+  filter(metric %in% c("accousticness", "danceability", "energy", "liveness", "valence", "tempo", "loudness")) |>
+  mutate(metric = str_to_title(metric)) |>
+  ggplot()+
+  geom_point(aes(x = track_name, y = value_old, color = color), alpha = 0.5)+
+  geom_segment(aes(x = track_name, xend = track_name, y = value_old, yend = value_ts, color = color), linetype = "dashed")+
+   geom_point_interactive(aes(x = track_name, y = value_ts, color = color, fill = color,
+                             tooltip = paste0(track_name," (Taylor's Version)"), data_id = value_ts), size = 3)+
+  facet_wrap(~metric, scales = "free")+
+  scale_color_identity()+
+  theme_bw()+
+  labs(title = "<span style =
+       'font-family:TaylorSwift;'>Taylor Swift Songs</span>",
+       x = "", y = "",
+       subtitle = "How Does the Taylor's Version of a Song Change from the Old Version?",
+       caption = "TidyTuesday 10-24-2023 | Github: @scolando")+
+  coord_flip() +
+  theme(legend.position = "none", axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+         strip.text = element_text(size = 8, family = font2, color = "#000000"),
+        strip.background = element_rect(fill = "#adbac3"),
+        plot.title = element_markdown(face = "bold", hjust = 0.5, size = 17),
+        plot.caption = element_text(size = 7, family = font2, color = "#000000"),
+        plot.subtitle = element_text(face = "bold.italic", size = 10, family = font2, color = "#000000", hjust = 0.5))
+
+girafe(ggobj = gg,
+        options = list(opts_tooltip(use_fill = TRUE, opacity = 1)))
+```
+
