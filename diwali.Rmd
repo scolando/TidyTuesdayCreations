@@ -1,0 +1,86 @@
+---
+title: "Diwali"
+author: "Sara Colando"
+date: "2023-11-14"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE,
+                      fig.align = "center")
+
+library(tidyverse)
+library(sunburstR)
+library(d3r)
+library(ggiraph)
+```
+
+```{r}
+diwali <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-11-14/diwali_sales_data.csv')
+```
+
+```{r}
+top_prods <- diwali |>
+  group_by(Product_Category) |>
+  count() |>
+  ungroup() |>
+  slice_max(n = 3, order_by = n)
+```
+
+```{r}
+diwali |>
+  filter(Product_Category %in% top_prods$Product_Category) |>
+  mutate(us_Amount = round(Amount*0.012,2)) |>
+  group_by(Product_Category, Gender, `Age Group`) |>
+summarize(size = n()) |>
+  d3_nest(value_cols = "size") |>
+  sund2b(showLabels = TRUE,rootLabel = ' ')
+```
+
+
+```{r}
+top_jobs <- diwali |>
+  group_by(Occupation) |>
+  count() |>
+  arrange(desc(n)) |>
+  ungroup() |>
+  slice_head(n = 6)
+```
+
+
+
+```{r}
+df <- diwali |>
+  filter(Occupation %in% top_jobs$Occupation) |>
+  mutate(us_Amount = round(Amount*0.012,0)) |>
+  drop_na() |>
+  group_by(Occupation) |>
+  summarise(sum = sum(us_Amount)) |>
+  rbind(c("NA", 0)) |>
+    mutate(sum = as.numeric(sum)) |>
+  mutate(Occupation_2 = if_else(Occupation == "NA", NA, Occupation))
+
+ df$Occupation <- factor(df$Occupation, levels = c("NA", "Hospitality", "Govt", "Banking", "Aviation", "Healthcare", "IT Sector"))
+ 
+  
+ gg_plot <- df |>
+  ggplot(aes(x = Occupation, y = sum, fill = Occupation_2, color = Occupation_2)) +
+  geom_col_interactive(width = 0.65, alpha = 0.5, aes(tooltip = paste0(Occupation,":\n",sum))) +
+  coord_polar(theta = "y")+
+  ylim(c(0, 200000))+
+  xlab("") +
+  ylab("Total Amount Spent (in USD)")+
+   ggtitle("Total Diwali Spending (in USD)\n for Different Occupations")+
+  geom_text(aes(y = 0, label = Occupation_2), hjust = 1.1, size = 3)+
+  scale_color_discrete(na.value = "white")+
+  theme_minimal()+
+  theme(legend.position = "none", axis.text.y = element_blank(), plot.title = element_text(hjust = 0.5))
+ 
+girafe(ggobj = gg_plot) |>
+  girafe_options(opacity = 1, opts_tooltip(use_fill = TRUE))
+```
+
+```{r}
+
+```
+
