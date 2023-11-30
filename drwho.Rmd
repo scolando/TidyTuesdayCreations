@@ -1,0 +1,131 @@
+---
+title: "Untitled"
+author: "Sara Colando"
+date: "2023-11-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.align = "center", message = FALSE, warning = FALSE)
+library(tidyverse)
+library(ggtext)
+library(patchwork)
+library(png)
+library(showtext)
+library(ggiraph)
+library(ggridges)
+```
+
+```{r}
+drwho_episodes <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-11-28/drwho_episodes.csv')
+drwho_directors <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-11-28/drwho_directors.csv')
+drwho_writers <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-11-28/drwho_writers.csv')
+```
+
+```{r}
+font_add_google("Roboto", "roboto")
+showtext_auto()
+
+body_font <- "roboto"
+title_font <- "roboto"
+```
+
+
+```{r}
+df <- drwho_episodes |>
+  left_join(drwho_directors, by = "story_number") |>
+  left_join(drwho_writers, by = "story_number") |>
+  group_by(writer) |>
+  summarise(n = n(), median_rating = median(rating, na.rm = TRUE), min_rating = min(rating), max_rating = max(rating)) |>
+  filter(n > 3) |>
+  pivot_longer(median_rating:max_rating, names_to = "metric", values_to = "value") |>
+  mutate(indicator = if_else(metric == "median_rating", TRUE, FALSE)) |>
+  filter(writer != "Peter Harness")
+```
+
+```{r}
+median_locs <- df |>
+  filter(metric == "median_rating")
+```
+
+
+```{r}
+titles <- drwho_episodes |>
+  left_join(drwho_directors, by = "story_number") |>
+  left_join(drwho_writers, by = "story_number") |>
+  filter(writer %in% df$writer) |>
+  select(writer, rating, episode_title) |>
+  group_by(writer) |>
+  arrange(desc(rating)) |>
+  slice(c(1,n())) 
+  
+```
+
+
+```{r warning = FALSE, message = FALSE}
+plot <- df |>
+  ggplot(aes(x = value, y = writer))+
+  geom_line(alpha = 0.5, size = .75)+
+  geom_curve(x = 85, xend = 86, y = 8, yend = 7.65, 
+             arrow = arrow(length = unit(0.05, "inches")))+
+  #geom_point(y = 8, x = 85, size = 8, color = "#FFC300")+
+  geom_point(data = median_locs, inherent.aes = TRUE, size = 7, color = "#202A44")+
+  geom_point_interactive(data = titles, aes(x = rating, y = writer, 
+                                            tooltip = episode_title, data_id = episode_title),
+                         color = "#202A44")+
+  geom_text(data = median_locs, aes(x = value, y = writer, label = round(value,1)), color = "white", size = 2.2)+
+  ylab("")+
+  scale_x_continuous(breaks = seq(70, 95,2))+
+  annotate("text", x = c(82, 86.5), y = c(8.3, 8.3), label = c("Min", "Max"), size = 3)+
+    annotate("text", x = 87.3, y = 7.65, label = "Median", size = 3)+
+  xlab("")+
+  labs(caption = "TidyTuesday 11/28/2023 | Github: @scolando")+
+  theme_classic()+
+  theme(plot.margin = margin(9, 20, 7, 190),
+        plot.title.position = "plot",
+        plot.background = element_rect(fill = "white", colour = "white"),
+        panel.background = element_rect(fill = "white", colour = "white"),
+        legend.position = "none", text = element_text(family = "roboto", size = 9)) 
+```
+
+```{r}
+tardis <- readPNG("tardis.png", native = TRUE)
+```
+
+
+```{r}
+full <- plot + inset_element(tardis, left = -1.1, bottom = -0.1, right = -.37, top = 1) + 
+    ggtitle("Dr. Who Episode Ratings\nby Episode Writer")+
+  theme(plot.title.position = "plot", text = element_text(family = "roboto"),
+        plot.title = element_text(face = "bold.italic"))
+```
+
+```{r}
+girafe(ggobj = full)
+```
+
+
+```{r}
+plot2 <- drwho_episodes |>
+  left_join(drwho_directors, by = "story_number") |>
+  left_join(drwho_writers, by = "story_number") |>
+  filter(writer %in% df$writer) |>
+  ggplot(aes(x = rating, y = writer))+
+  ggridges::geom_density_ridges(fill = "#202A44", color = "#202A44", alpha = 0.8)+
+  ylab("")+
+  xlab("")+
+  labs(caption = "TidyTuesday 11/28/2023 | Github: @scolando")+
+  theme_classic()+
+  theme(plot.margin = margin(9, 20, 7, 190),
+        plot.title.position = "plot",
+        plot.background = element_rect(fill = "white", colour = "white"),
+        panel.background = element_rect(fill = "white", colour = "white"),
+        legend.position = "none", text = element_text(family = "roboto", size = 9)) 
+```
+```{r}
+plot2 + inset_element(tardis, left = -1.1, bottom = -0.1, right = -.37, top = 1) + 
+    ggtitle("Dr. Who Episode Ratings\nby Episode Writer")+
+  theme(plot.title.position = "plot", text = element_text(family = "roboto"),
+        plot.title = element_text(face = "bold.italic"))
+```
+
