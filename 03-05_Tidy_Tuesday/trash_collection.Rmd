@@ -1,0 +1,121 @@
+---
+title: "Tiy Tuesday 03-05-2024: Mr. Trash Wheel"
+author: "Sara Colando"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, fig.align = "center")
+library(tidyverse)
+library(ggstream)
+library(MetBrewer)
+```
+
+```{r}
+# loading the data
+trashwheel <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2024/2024-03-05/trashwheel.csv')
+```
+
+```{r}
+# data wrangling
+df <- trashwheel |>
+  pivot_longer(PlasticBottles:SportsBalls, names_to = "type", values_to = "count") |>
+  mutate(Date_new = as_date(zoo::as.yearmon(paste(Year, Date), "%Y %m"))) |>
+  group_by(Name, Date_new, type) |>
+  summarize(total = sum(count)) |>
+  ungroup()  |>
+  mutate(type = case_when(
+    type == "CigaretteButts" ~ "Cigarette Butts",
+    type == "GlassBottles" ~ "Glass Bottles",
+    type == "PlasticBottles" ~ "Plastic Bottles",
+    type == "PlasticBags" ~ "Plastic Bags",
+    type == "SportsBalls" ~ "Sports Balls",
+    TRUE ~ type
+  ))
+
+df$Name <-as.factor(df$Name)
+df$Name <- factor(df$Name,levels=c("Gwynnda Trash Wheel", "Captain Trash Wheel","Professor Trash Wheel", "Mister Trash Wheel"))
+```
+
+These plots were inspired by Benjamin Nowak's stream plots. The code for these OG plots is available [here](https://github.com/BjnNowak/TidyTuesday/blob/main/trash_wheel.R).
+
+```{r out.width= '100%', out.height='100%'}
+#plot 1 creation
+df |>
+ ggplot(aes(x=Date_new,y=total,fill=type))+
+  geom_stream(type = "proportional", size = .75,extra_span = .1, bw = .65)+
+  geom_stream(geom = "contour", type = "proportional", size = .2, extra_span = .1, bw = .65,
+              color = "white")+
+  facet_wrap( 
+    as.factor(Name)~., ncol = 1)+
+    geom_vline(xintercept = as_date(c("2018-01-01", "2019-01-01", "2020-01-01", "2021-01-01",
+                                    "2022-01-01", "2023-01-01", "2017-01-01",
+                                    "2016-01-01", "2015-01-01")), linetype = "dashed")+
+  scale_fill_manual(values = met.brewer("VanGogh2"))+
+  ylab("")+
+  xlab("")+
+  scale_y_continuous(breaks=scales::pretty_breaks(5))+
+  guides(fill = guide_legend(title = "Type of Trash"))+
+  theme_classic()+
+  theme(panel.grid = element_blank(),
+        strip.background = element_rect(fill = "#EBE6D9", color = "#EBE6D9"),
+        strip.text = element_text(face = "bold", size = 10, hjust = 0.5),
+        axis.line.x = element_line(color = "grey50"),
+        axis.line.y = element_line(color = "grey50"),
+        plot.background = element_rect(fill = "#EBE6D9"),
+        panel.background = element_rect(fill = "#EBE6D9"),
+        legend.background = element_rect(fill = "#EBE6D9"),
+        legend.title = element_text(face = "bold"),
+        text = element_text(size = 8, color = "black"),
+        axis.title = element_text(size = 10, face = "bold"),
+        plot.title = element_text(hjust = 0.5, face = "bold", size = 12),
+        plot.subtitle = element_text(hjust = 0.5, face = "italic", size = 10))
+```
+
+
+
+
+```{r out.width= '100%', out.height='100%'}
+# plot 2 creation
+df |>
+  ggplot(aes(x = Date_new, y = total, fill = type))+
+  geom_stream(size = .75,extra_span = .1, bw = .65)+
+  scale_fill_manual(values = met.brewer("VanGogh2"))+
+  geom_stream(geom = "contour", size = .2, extra_span = .1, bw = .65,
+              color = "grey90")+
+    facet_wrap( 
+    as.factor(Name)~., ncol = 1,
+    scales = "free_y")+
+    ylab("Amount in Units\n")+
+  xlab("\nDate (in Month-Year)")+
+  labs(title = "Understanding Mr. Trash Wheel: Baltimore's Healthy Harbor Initiative",
+          subtitle = "How the Amount and Kind of Trash Collected by the Mr. Trash Wheel Fleet Changes Over Time\n",
+       caption = "Tidy Tuesday: 03-05-2024 | GitHub: @scolando") +
+  geom_vline(xintercept = as_date(c("2018-01-01", "2020-01-01", 
+                                    "2022-01-01",
+                                    "2016-01-01")), linetype = "dashed")+
+  scale_y_continuous(breaks=scales::pretty_breaks(5))+
+  guides(fill = guide_legend(title = "Type of Trash"))+
+  theme_classic()+
+  theme(panel.grid = element_blank(),
+        strip.background = element_rect(fill = "#EBE6D9", color = "#EBE6D9"),
+        strip.text = element_text(face = "bold", size = 10, hjust = 0.5),
+        axis.line.x = element_line(color = "grey50"),
+        axis.line.y = element_line(color = "grey50"),
+        plot.background = element_rect(fill = "#EBE6D9"),
+        panel.background = element_rect(fill = "#EBE6D9"),
+        legend.background = element_rect(fill = "#EBE6D9"),
+        legend.title = element_text(face = "bold"),
+        text = element_text(size = 8, color = "black"),
+        axis.title = element_text(size = 10, face = "bold"),
+        plot.title = element_text(hjust = 0.5, face = "bold", size = 12),
+        plot.subtitle = element_text(hjust = 0.5, face = "italic", size = 10))
+
+#ggsave("Desktop/mister_trash.png", height = 8, width = 12, units = "in")
+```
+
+```{r}
+# for funsies
+praise::praise()
+```
+
