@@ -1,5 +1,5 @@
 ---
-title: "Tiy Tuesday 03-05-2024: Mr. Trash Wheel"
+title: "Tidy Tuesday 03-05-2024: Mr. Trash Wheel"
 author: "Sara Colando"
 output: html_document
 ---
