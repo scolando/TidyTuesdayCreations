@@ -1,8 +1,10 @@
 My personal journal of TidyTuesday creations. Below are links to see my TidyTuesday creations (mainly data visualizations) in action. My [github repository](https://github.com/scolando/TidyTuesdayCreations) contains the source code etc.
 
-* 03/05/2023 [Mr. Trash Wheel](https://scolando.github.io/TidyTuesdayCreations/trash_collection.html) 
+* 05/07/2024 [Rolling Stone Best 500 Albums](https://scolando.github.io/TidyTuesdayCreations/rolling_stone.html)
 
-* 11/28/2023 [Dr. Who](https://scolando.github.io/TidyTuesdayCreations/drwho.html) 
+* 03/05/2024 [Mr. Trash Wheel](https://scolando.github.io/TidyTuesdayCreations/trash_collection.html) 
+
+* 11/28/2024 [Dr. Who](https://scolando.github.io/TidyTuesdayCreations/drwho.html) 
 
 * 11/14/2023 [Diwali Sales](https://scolando.github.io/TidyTuesdayCreations/diwali.html)
 
