@@ -1,5 +1,9 @@
 ---
+<<<<<<< HEAD
 title: "Tiy Tuesday 03-05-2024: Mr. Trash Wheel"
+=======
+title: "Tidy Tuesday 03-05-2024: Mr. Trash Wheel"
+>>>>>>> 4d8d906edcf854c5cbd5b7c81fdf171bcf0bb41c
 author: "Sara Colando"
 output: html_document
 ---
