@@ -1,0 +1,170 @@
+---
+title: "Rolling Stone Album Rankings"
+author: "Sara Colando"
+date: "05-07-2024"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+library(tidyverse)
+library(ggalluvial)
+library(ggthemes)
+library(shadowtext)
+library(extrafont)
+library(showtext)
+library(gt)
+library(ggpubr)
+```
+
+```{r}
+font_add(family = "rollingstone", regular = "Royalacid.ttf")
+font_add(family = "rollingstone2", regular = "Royalacid_o.ttf")
+showtext_auto()
+```
+
+
+```{r}
+rolling_stone <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2024/2024-05-07/rolling_stone.csv')
+```
+
+
+```{r warning = FALSE, out.width='100%'}
+plot <- rolling_stone |>
+  mutate(decade = floor(release_year/10)*10,
+         quantiled_age = case_when(
+           ave_age_at_top_500 <= 24.04167 ~ "Under 24",
+           ave_age_at_top_500 > 24.04167 & ave_age_at_top_500 <= 27.00000 ~ "24 to 27",
+           ave_age_at_top_500 > 27 & ave_age_at_top_500 <= 31.00000 ~ "27 to 31",
+           ave_age_at_top_500 > 31.00000 ~ "Over 31",
+           TRUE ~ NA),
+          top_2003 = case_when(
+           rank_2003 <= 10 ~ "Top 10",
+           rank_2003 <= 50 ~ "Top 50",
+           rank_2003 <= 100 ~ "Top 100",
+           rank_2003 <= 250 ~ "Top 250",
+           rank_2003 <= 500 ~ "Top 500",
+           is.na(rank_2003) ~ "not ranked",
+           TRUE ~ "not ranked"),
+         top_2003 = if_else(is.na(top_2003), "not ranked", top_2003),
+         top_2012 = case_when(
+           rank_2012 <= 10 ~ "Top 10",
+           rank_2012 <= 50 ~ "Top 50",
+           rank_2012 <= 100 ~ "Top 100",
+           rank_2012 <= 250 ~ "Top 250",
+           rank_2012 <= 500 ~ "Top 500",
+           TRUE ~ "not ranked"),
+         top_2012 = if_else(is.na(top_2012), "not ranked", top_2012),
+          top_2020 = case_when(
+           rank_2020 <= 10 ~ "Top 10",
+           rank_2020 <= 50 ~ "Top 50",
+           rank_2020 <= 100 ~ "Top 100",
+           rank_2020 <= 250 ~ "Top 250",
+           rank_2020 <= 500 ~ "Top 500",
+           TRUE ~ "not ranked"),
+         top_2020 = if_else(is.na(top_2020), "not ranked", top_2020),
+         artist_gender = fct_relevel(artist_gender, "Male", "Male/Female"),
+         quantiled_age = fct_relevel(quantiled_age, "Under 24", "24 to 27",
+                                     "27 to 31", "Over 31"),
+         top_2003 = fct_relevel(top_2003, "Top 10", "Top 50", "Top 100", "Top 250", "Top 500"),
+         top_2012 = fct_relevel(top_2012, "Top 10", "Top 50", "Top 100", "Top 250", "Top 500"),
+         top_2020 = fct_relevel(top_2020, "Top 10", "Top 50", "Top 100", "Top 250", "Top 500")) |>
+  group_by(artist_gender, decade, quantiled_age, top_2003, top_2012, top_2020) |>
+  drop_na() |>
+  summarize(freq = n()) |>
+  ggplot(aes(y = freq, axis1 = artist_gender, axis2 = decade, axis3 = quantiled_age, axis4 = top_2003,
+             axis5 = top_2012, axis6 = top_2020)) +
+  geom_alluvium(aes(fill = artist_gender), width = 1/3, alpha = .7, color = "grey20", size=.1)+
+  geom_stratum(width = 1/3, fill = "grey20", color = "black")+
+  geom_label(stat = "stratum", aes(label = after_stat(stratum)), color = "grey85", size = 10, fontface = "bold", 
+             fill = "grey20", label.padding = unit(0.1, "lines"), label.r = unit(0, "pt"))+
+  geom_text(x = 5, y = 210, label = "2012", color = "grey85", family = "rollingstone", size = 24)+
+  geom_text(x = 4, y = 210, label = "2003", color = "grey85", family = "rollingstone", size = 24)+
+  geom_text(x = 6, y = 210, label = "2020", color = "grey85", family = "rollingstone", size = 24)+
+  scale_fill_tableau()+
+  ggtitle("The Rolling Stone's Top 500 Albums")+
+  labs(subtitle = "Analyzing the Makeup of the Rolling Stone Magazines Top 500 Albums of All Time in 2003, 2012, and 2020")+
+  ylim(c(0,215))+
+  xlim(c(.75,6.2))+
+  theme_classic()+
+  theme(panel.background = element_rect(fill = "black", color = "black"),
+        plot.background = element_rect(fill = "black"),
+        legend.position = "none",
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        axis.title = element_blank(),
+        plot.title = element_text(family = "rollingstone2", hjust = .5, color = "grey85", size = 104),
+        plot.subtitle = element_text(family = "rollingstone", hjust = .5, color = "grey85", size = 64),
+        axis.line = element_blank(),
+        panel.grid.major.y = element_line(color = "grey20"))
+
+ggsave("rolling_stone.png", plot = plot, width = 5, height = 4, dpi = 1000)
+```
+
+```{r}
+gt <- rolling_stone |>
+  mutate(decade = floor(release_year/10)*10,
+         quantiled_age = case_when(
+           ave_age_at_top_500 <= 24.04167 ~ "Under 24",
+           ave_age_at_top_500 > 24.04167 & ave_age_at_top_500 <= 27.00000 ~ "24 to 27",
+           ave_age_at_top_500 > 27 & ave_age_at_top_500 <= 31.00000 ~ "27 to 31",
+           ave_age_at_top_500 > 31.00000 ~ "Over 31",
+           TRUE ~ NA),
+          top_2003 = case_when(
+           rank_2003 <= 10 ~ "Top 10",
+           rank_2003 <= 50 ~ "Top 50",
+           rank_2003 <= 100 ~ "Top 100",
+           rank_2003 <= 250 ~ "Top 250",
+           rank_2003 <= 500 ~ "Top 500",
+           is.na(rank_2003) ~ "not ranked",
+           TRUE ~ "not ranked"),
+         top_2003 = if_else(is.na(top_2003), "not ranked", top_2003),
+         top_2012 = case_when(
+           rank_2012 <= 10 ~ "Top 10",
+           rank_2012 <= 50 ~ "Top 50",
+           rank_2012 <= 100 ~ "Top 100",
+           rank_2012 <= 250 ~ "Top 250",
+           rank_2012 <= 500 ~ "Top 500",
+           TRUE ~ "not ranked"),
+         top_2012 = if_else(is.na(top_2012), "not ranked", top_2012),
+          top_2020 = case_when(
+           rank_2020 <= 10 ~ "Top 10",
+           rank_2020 <= 50 ~ "Top 50",
+           rank_2020 <= 100 ~ "Top 100",
+           rank_2020 <= 250 ~ "Top 250",
+           rank_2020 <= 500 ~ "Top 500",
+           TRUE ~ "not ranked"),
+         top_2020 = if_else(is.na(top_2020), "not ranked", top_2020),
+         artist_gender = fct_relevel(artist_gender, "Male", "Male/Female"),
+         quantiled_age = fct_relevel(quantiled_age, "Under 24", "24 to 27",
+                                     "27 to 31", "Over 31"),
+         top_2003 = fct_relevel(top_2003, "Top 10", "Top 50", "Top 100", "Top 250", "Top 500"),
+         top_2012 = fct_relevel(top_2012, "Top 10", "Top 50", "Top 100", "Top 250", "Top 500"),
+         top_2020 = fct_relevel(top_2020, "Top 10", "Top 50", "Top 100", "Top 250", "Top 500")) |>
+  filter(top_2020 %in% c("Top 10")) |>
+  select(rank_2020, clean_name, album, artist_gender, decade, ave_age_at_top_500) |>
+  mutate(ave_age_at_top_500 = round(ave_age_at_top_500, 2)) |>
+  arrange(rank_2020) |>
+  rename("2020 Rank" = rank_2020,
+         "Name" = clean_name,
+         "Album" = album,
+         "Artist Gender" = artist_gender,
+         "Album Decade" = decade,
+         "Average Age at Album Debut" = ave_age_at_top_500) |>
+  gt() |>
+  tab_options(table.background.color = "black",
+              table.font.color = "grey20",
+              table.border.top.color = "grey20")
+```
+
+
+
+```{r}
+gt
+```
+
+
+```{r}
+knitr::include_graphics("rolling_stone.png")
+```
+
