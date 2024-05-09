@@ -51,3 +51,5 @@ My personal journal of TidyTuesday creations. Below are links to see my TidyTues
 * 03/22/2022 [Baby Names](https://rpubs.com/scolando/Tidy-Tuesday-03-22-2022)
 
 * 01/25/2022 [Board Games](https://rpubs.com/scolando/Tidy-Tuesday-01-25-2022)
+
+Here is a link too to my [RPubs account](https://rpubs.com/scolando)!
